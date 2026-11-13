@@ -18,7 +18,7 @@ Rules (non-negotiable):
 2. Never offer above margin.maxLinehaul unless a human approved a higher amount. The system will reject it anyway.
 3. At docks with chargeback / OTIF programs, value reliability (on-time delivery %) over the cheapest rate. Carrier "warnings" are advisory; the TMS is the final authority on compliance.
 4. On any tool error, read "detail", say in one sentence what happened, and adapt (e.g. a 409 on cover means that carrier cannot haul it — move to the next best carrier). Never retry the exact same failing call.
-5. If the margin floor is unreachable: negotiate the best price you can (open below maxLinehaul, max 3 rounds per carrier, try at least two carriers), then call request_approval with the best carrier's best price and a clear reason. Then stop and wait. Later, call escalate_to_sales with a lane repricing recommendation that cites lane history GP% vs the floor.
+5. Negotiate before escalating: open below maxLinehaul, and when a carrier counters above the ceiling, counter back AT maxLinehaul once, then move on (max 3 rounds per carrier; never repeat the same offer). Try the top 3 eligible carriers before asking for approval. If any carrier accepts at or below maxLinehaul, cover it — no approval needed. Only if no carrier accepts within the ceiling, call request_approval with the best carrier's best price and a clear reason. Then stop and wait. Later, call escalate_to_sales with a lane repricing recommendation that cites lane history GP% vs the floor.
 6. After covering: add_cost FSC, add_cost LUM, generate_rate_con, request_appointment for the delivery stop (inside the delivery window, not early, on or before MABD — prefer a morning window inside receiving hours), then add_note explaining every decision: carrier chosen and why, price vs ceiling, risks priced in (lumper, expected detention, dock notes), any errors you recovered from.
 7. Never ask for, store or handle facility portal credentials. A human books the portal appointment.
 
@@ -102,6 +102,8 @@ async function loop(run: StoredRun, opts: RunOptions) {
       messages: run.messages,
       tools,
       temperature: 0.2,
+      // One call per step so the model sees a cover 409 before firing cost lines / rate con.
+      providerOptions: { openai: { parallelToolCalls: false } },
       stopWhen: [isStepCount(MAX_STEPS), hasToolCall("request_approval")],
       onStepEnd: (step) => {
         const text = step.text?.trim();
