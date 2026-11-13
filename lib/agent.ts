@@ -7,6 +7,7 @@
 import { hasToolCall, isStepCount, streamText, type ModelMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
 import type { AgentEvent, Money } from "./types";
+import { marginProtected } from "./intel";
 import { createTools, newRunState, type Autonomy, type RunState, type ToolDeps } from "./tools";
 
 const MAX_STEPS = 24;
@@ -18,7 +19,7 @@ Rules (non-negotiable):
 2. Never offer above margin.maxLinehaul unless a human approved a higher amount. The system will reject it anyway.
 3. At docks with chargeback / OTIF programs, value reliability (on-time delivery %) over the cheapest rate. Carrier "warnings" are advisory; the TMS is the final authority on compliance.
 4. On any tool error, read "detail", say in one sentence what happened, and adapt (e.g. a 409 on cover means that carrier cannot haul it — move to the next best carrier). Never retry the exact same failing call.
-5. Collect quotes before deciding: the top 3 eligible carriers by score AND the eligible budget carrier (complianceLight YELLOW), every run. Open below maxLinehaul; when a carrier counters above the ceiling, counter back AT maxLinehaul once, then move on (max 3 rounds per carrier; never repeat an offer). Then cover the CHEAPEST carrier that accepted at or below maxLinehaul — no approval needed. Don't pre-judge carrier warnings: the TMS decides compliance at cover. If cover fails, cover the next-cheapest accepted carrier. Only if no carrier accepted within the ceiling, call request_approval with the most reliable carrier's best price and a one-sentence reason, then stop and wait. When the floor is unreachable at historical rates, call escalate_to_sales at the end.
+5. Collect quotes before deciding: the top 3 eligible carriers by score AND the eligible budget carrier (complianceLight YELLOW), every run. Open below maxLinehaul; when a carrier counters above the ceiling, counter back AT maxLinehaul once, then move on (max 3 rounds per carrier; never repeat an offer). Then cover the CHEAPEST carrier that accepted at or below maxLinehaul — no approval needed. Don't pre-judge carrier warnings: the TMS decides compliance at cover. If cover fails, cover the next-cheapest accepted carrier; if none accepted, counter the remaining quoted carriers AT maxLinehaul first (if you have not yet). Only if no carrier accepted within the ceiling, call request_approval with the most reliable carrier's best price and a one-sentence reason, then stop and wait. When the floor is unreachable at historical rates, call escalate_to_sales at the end.
 6. After covering: add_cost FSC, add_cost LUM, generate_rate_con, request_appointment for the delivery stop (inside the delivery window, not early, on or before MABD — prefer a morning window inside receiving hours), then add_note. The system writes the facts (carrier, price vs ceiling, buy breakdown, GP, errors recovered, appointment) — you give only a one-sentence "why" for the carrier choice. escalate_to_sales works the same way: one sentence of context; the numbers are filled in by code.
 7. Autonomy is set in the first message. In "supervised" mode, call request_approval before EVERY cover (even within the ceiling) with the carrier and its accepted price, then stop and wait.
 8. Never ask for, store or handle facility portal credentials. A human books the portal appointment.
@@ -81,7 +82,10 @@ export async function resumeRun(
     run.state.approvedCarrier = pending.carrierId;
     text =
       `Human APPROVED a linehaul of up to $${offer.toFixed(2)} for ${pending.carrierId} (resulting GP ${pending.numbers.resultingGpPct}%). ` +
-      `If ${pending.carrierId} already accepted that amount, go straight to cover; otherwise negotiate at that amount, then cover. Finish the post-cover steps.`;
+      (run.state.deals[pending.carrierId]?.amount === offer
+        ? `${pending.carrierId} already accepted $${offer.toFixed(2)}: cover now, then finish the post-cover steps.`
+        : `${pending.carrierId} has not accepted yet: negotiate at exactly $${offer.toFixed(2)}, then cover and finish the post-cover steps.`) +
+      (run.state.brief && !run.state.brief.margin.floorReachableAtHistory ? " Then escalate_to_sales." : "");
   } else {
     text =
       `Human REJECTED going above the $${run.state.brief?.margin.maxLinehaul.toFixed(2)} ceiling. Do not cover. ` +
@@ -153,16 +157,6 @@ function summarize(s: RunState): string {
   return `Shipment ${s.shipmentId} not covered.`;
 }
 
-/**
- * Header counter: dock costs priced into the buy that a truck-only rep would have missed
- * (lumper + expected detention), plus overpay avoided vs the lane's historical linehaul.
- * TODO(Akshaya): move into lib/intel.ts if you'd rather own this number.
- */
 function protectedDollars(s: RunState): Money | undefined {
-  const b = s.brief;
-  if (!b || !s.coveredBy) return undefined;
-  const dock = b.risk.expectedLumper$ + b.risk.expectedDetention$;
-  const hist = b.laneHistory.avgLinehaulPerMile != null ? b.laneHistory.avgLinehaulPerMile * b.lane.miles : null;
-  const avoided = hist != null ? Math.max(0, hist - s.coveredBy.amount) : 0;
-  return Math.round((dock + avoided) * 100) / 100;
+  return s.brief && s.coveredBy ? marginProtected(s.brief, s.coveredBy.amount) : undefined;
 }

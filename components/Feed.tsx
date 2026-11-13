@@ -69,6 +69,39 @@ function Bubble({ e, name }: { e: Extract<AgentEvent, { type: "negotiation" }>; 
   );
 }
 
+/**
+ * The moment the TMS refuses a carrier. Shows who was blocked and why (the TMS's own sentence),
+ * then fills in what the agent did next once it happens.
+ */
+function Blocked({ e, events, i, names }: { e: Extract<AgentEvent, { type: "tool_result" }>; events: AgentEvent[]; i: number; names: Record<string, string> }) {
+  const call = [...events.slice(0, i)].reverse().find((x) => x.type === "tool_call" && x.name === "cover");
+  const carrierId = call?.type === "tool_call" ? (call.args as { carrier_id?: string }).carrier_id ?? "?" : "?";
+  const r = (e.result ?? {}) as { error?: string; detail?: string };
+  const status = r.error?.split(" ")[0] ?? "ERR";
+  const name = (id: string) => names[id] ?? id;
+  let next: string | null = null;
+  for (const x of events.slice(i + 1)) {
+    if (x.type === "approval_needed") { const id = x.reason.split(":")[0]; next = `Asked you to approve ${name(id)} at ${usd(Number(x.numbers.offer))}.`; break; }
+    if (x.type === "tool_call" && x.name === "cover") { const id = (x.args as { carrier_id?: string }).carrier_id ?? "?"; next = `Covering with ${name(id)} instead.`; break; }
+    if (x.type === "negotiation" && x.from === "broker") { next = `Went back to ${name(x.carrierId)} to negotiate.`; break; }
+  }
+  return (
+    <div className="animate-[shake_.5s_ease-in-out_1] overflow-hidden rounded-xl border-2 border-rose-500/70 bg-rose-500/10 motion-reduce:animate-none">
+      <div className="flex items-center gap-3 bg-rose-500/20 px-4 py-2">
+        <span className="rounded bg-rose-500 px-2 py-0.5 font-mono text-sm font-bold text-white">{status}</span>
+        <span className="font-semibold text-rose-100">The TMS blocked this carrier</span>
+      </div>
+      <div className="px-4 py-3">
+        <p className="text-lg font-semibold text-white">{name(carrierId)}</p>
+        <p className="mt-1 text-sm text-rose-100">{r.detail ?? "Cover rejected."}</p>
+      </div>
+      <div className={`border-t px-4 py-2.5 text-sm ${next ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200" : "border-rose-500/30 text-rose-200/80"}`}>
+        {next ? <><b>Recovered.</b> {next}</> : "The agent is reading the rejection and choosing another carrier…"}
+      </div>
+    </div>
+  );
+}
+
 export default function Feed({ events, error }: { events: AgentEvent[]; error: string | null }) {
   const ref = useRef<HTMLDivElement>(null);
   // Carrier display names from the load brief, so bubbles read "Rusty Rig Transport Co. · RUSTYRIG".
@@ -76,12 +109,12 @@ export default function Feed({ events, error }: { events: AgentEvent[]; error: s
   const names: Record<string, string> = Object.fromEntries(((brief?.type === "tool_result" ? (brief.result as LoadBrief).carriers : undefined) ?? []).map((c) => [c.vendorId, c.name]));
   useEffect(() => { ref.current?.scrollTo({ top: ref.current.scrollHeight, behavior: "smooth" }); }, [events.length, error]);
   return (
-    <main className="flex min-h-0 flex-col">
-      <div className="flex items-baseline justify-between px-6 py-3">
+    <main className="flex min-h-0 flex-col border-l border-white/10">
+      <div className="flex items-baseline justify-between px-5 py-3">
         <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400">Live agent feed</h2>
         <span className="font-mono text-xs text-slate-500">{events.length} events</span>
       </div>
-      <div ref={ref} data-lenis-prevent className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 pb-6">
+      <div ref={ref} data-lenis-prevent className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 pb-6">
         {events.length === 0 && (
           <div className="grid h-full place-items-center text-center text-slate-500">
             <div><p className="text-lg text-slate-300">Ready.</p><p className="mt-1 text-sm">Press “Run coverage agent” to start.</p></div>
@@ -93,7 +126,9 @@ export default function Feed({ events, error }: { events: AgentEvent[]; error: s
             case "thought":
               return <p key={k} className="animate-[fadein_.35s_ease-out] border-l-2 border-slate-600 pl-4 text-[15px] leading-relaxed text-slate-300">{e.text}</p>;
             case "tool_call": return <div key={k} className="animate-[fadein_.35s_ease-out]"><ToolCall e={e} /></div>;
-            case "tool_result": return <div key={k} className="animate-[fadein_.35s_ease-out]"><ToolResult e={e} recovered={events.slice(i + 1).some((x) => x.type === "tool_call" || x.type === "negotiation")} /></div>;
+            case "tool_result":
+              if (!e.ok && e.name === "cover") return <div key={k}><Blocked e={e} events={events} i={i} names={names} /></div>;
+              return <div key={k} className="animate-[fadein_.35s_ease-out]"><ToolResult e={e} recovered={events.slice(i + 1).some((x) => x.type === "tool_call" || x.type === "negotiation")} /></div>;
             case "negotiation": return <div key={k} className="animate-[fadein_.35s_ease-out]"><Bubble e={e} name={names[e.carrierId]} /></div>;
             case "approval_needed":
               return <div key={k} className="rounded-xl border border-amber-400/50 bg-amber-400/10 p-4 text-sm text-amber-100"><b>Paused for human approval.</b> {e.reason}</div>;

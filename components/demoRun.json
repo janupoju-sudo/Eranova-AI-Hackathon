@@ -1,0 +1,933 @@
+{
+ "recordedAt": "2026-11-13 live TMS run (hero 7300176): RUSTYRIG 409 -> approval -> approve / reject",
+ "queue": [
+  {
+   "shipmentId": "7300175",
+   "customerId": "MIDWAYDST",
+   "lane": "Kansas City, MO \u2192 Aurora, CO",
+   "pickupDate": "2026-11-18",
+   "sell": 2347.5
+  },
+  {
+   "shipmentId": "7300172",
+   "customerId": "VALIANTFD",
+   "lane": "Des Moines, IA \u2192 Memphis, TN",
+   "pickupDate": "2026-11-18",
+   "sell": 2075.2
+  },
+  {
+   "shipmentId": "7300176",
+   "customerId": "NORTHSTAR",
+   "lane": "Chicago, IL \u2192 Dallas, TX",
+   "pickupDate": "2026-11-17",
+   "sell": 3479
+  },
+  {
+   "shipmentId": "7300170",
+   "customerId": "KEYSTONE-TX",
+   "lane": "Columbus, OH \u2192 Fort Worth, TX",
+   "pickupDate": "2026-11-16",
+   "sell": 3664.5
+  },
+  {
+   "shipmentId": "7300153",
+   "customerId": "NORTHSTAR",
+   "lane": "Chicago, IL \u2192 McDonough, GA",
+   "pickupDate": "2026-11-15",
+   "sell": 2721.2
+  },
+  {
+   "shipmentId": "7300154",
+   "customerId": "KEYSTONE-TX",
+   "lane": "Columbus, OH \u2192 Fort Worth, TX",
+   "pickupDate": "2026-11-14",
+   "sell": 3696
+  }
+ ],
+ "pre": [
+  {
+   "type": "thought",
+   "text": "Starting coverage run for shipment 7300176 \u00b7 autonomy: auto."
+  },
+  {
+   "type": "tool_call",
+   "name": "get_load_brief",
+   "args": {
+    "shipment_id": "7300176"
+   }
+  },
+  {
+   "type": "tool_result",
+   "name": "get_load_brief",
+   "ok": true,
+   "result": {
+    "shipmentId": "7300176",
+    "customerId": "NORTHSTAR",
+    "lane": {
+     "origin": "Chicago, IL",
+     "destination": "Dallas, TX",
+     "miles": 925
+    },
+    "equipment": "V",
+    "weightLb": 36938,
+    "pickupWindow": {
+     "start": "2026-11-17T08:00:00",
+     "end": "2026-11-17T14:00:00",
+     "tz": "America/Chicago"
+    },
+    "deliveryWindow": {
+     "start": "2026-11-19T06:00:00",
+     "end": "2026-11-19T14:00:00",
+     "tz": "America/Chicago"
+    },
+    "mabdDate": "2026-11-19",
+    "sell": {
+     "total": 3479,
+     "lines": [
+      {
+       "code": "FRT",
+       "amount": 2691.75
+      },
+      {
+       "code": "FSC",
+       "amount": 527.25
+      },
+      {
+       "code": "LUM",
+       "amount": 260
+      }
+     ]
+    },
+    "facility": {
+     "id": "BBR-DC135",
+     "avgUnloadMin": 150,
+     "graceMin": 30,
+     "lumperPolicy": "REQUIRED (driver assist LUMPER)",
+     "lumperFeeRange": [
+      150,
+      300
+     ],
+     "leadTimeHours": 48,
+     "mabdProgramNote": "OTIF program \u2014 chargeback 3% of PO value for arrivals after MABD; early delivery also non-compliant.",
+     "receivingHours": "fri/mon/thu/tue/wed 06:00\u201314:00",
+     "complianceFlags": [
+      "SEAL_REQUIRED",
+      "ID_REQUIRED",
+      "CHEP pallets",
+      "Reschedules < 24h before slot forfeit the slot; rebook via portal only."
+     ],
+     "notes": [
+      "2026-03-18: Portal slots for 06:00-08:00 go 3+ days out \u2014 book early in the week.",
+      "2026-07-16: Driver turned away 05/2026 for missing seal \u2014 gate enforces SEAL_REQUIRED hard.",
+      "2026-10-09: Lumper receipts now itemized per trailer \u2014 collect the itemized copy before the driver leaves.",
+      "2026-11-04: Door 17-22 under repair; expect 30-45 min extra dwell at busy slots."
+     ]
+    },
+    "risk": {
+     "expectedDwellH": 3.1,
+     "expectedDetentionH": 1.1,
+     "expectedDetention$": 82.5,
+     "expectedLumper$": 241.25
+    },
+    "laneHistory": {
+     "loads": 8,
+     "avgLinehaulPerMile": 2.29,
+     "avgLumper$": 241.25,
+     "avgGpPct": 14.76
+    },
+    "market": {
+     "low": 2076.17,
+     "target": 2270,
+     "high": 2444.42,
+     "rateId": "RE-20261117-a4695e"
+    },
+    "margin": {
+     "floorPct": 18,
+     "maxBuyTotal": 2852.78,
+     "carrierFuel$": 527.25,
+     "maxLinehaul": 2084.28,
+     "floorReachableAtHistory": false
+    },
+    "carriers": [
+     {
+      "vendorId": "LAKESHORE",
+      "name": "Lakeshore Carriers Inc.",
+      "equipment": [
+       "V"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2027-08-15",
+      "complianceLight": "GREEN",
+      "onTimePickupPct": 94,
+      "onTimeDeliveryPct": 93,
+      "claims": 0,
+      "loads": 188,
+      "score": 69.16,
+      "warnings": [],
+      "eligible": true
+     },
+     {
+      "vendorId": "PRAIRIEHL",
+      "name": "Prairie Haul Lines",
+      "equipment": [
+       "V"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2027-06-11",
+      "complianceLight": "GREEN",
+      "onTimePickupPct": 93,
+      "onTimeDeliveryPct": 92,
+      "claims": 0,
+      "loads": 203,
+      "score": 68.76,
+      "warnings": [],
+      "eligible": true
+     },
+     {
+      "vendorId": "GULFSTRMX",
+      "name": "Gulfstream Express Carriers",
+      "equipment": [
+       "R",
+       "V"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2027-04-22",
+      "complianceLight": "GREEN",
+      "onTimePickupPct": 92,
+      "onTimeDeliveryPct": 93,
+      "claims": 0,
+      "loads": 176,
+      "score": 68.32,
+      "warnings": [],
+      "eligible": true
+     },
+     {
+      "vendorId": "CANYONFRT",
+      "name": "Canyon Freight Systems",
+      "equipment": [
+       "V",
+       "R"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2027-04-12",
+      "complianceLight": "GREEN",
+      "onTimePickupPct": 92,
+      "onTimeDeliveryPct": 91,
+      "claims": 0,
+      "loads": 121,
+      "score": 66.42,
+      "warnings": [],
+      "eligible": true
+     },
+     {
+      "vendorId": "ACMECARR",
+      "name": "Acme Carrier Inc.",
+      "equipment": [
+       "V",
+       "HS",
+       "SB"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2027-05-12",
+      "complianceLight": "GREEN",
+      "onTimePickupPct": 95,
+      "onTimeDeliveryPct": 94,
+      "claims": 1,
+      "loads": 412,
+      "score": 66.1,
+      "warnings": [],
+      "eligible": true
+     },
+     {
+      "vendorId": "SUNRIDGE",
+      "name": "Sunridge Trucking LLC",
+      "equipment": [
+       "V",
+       "R"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2026-11-25",
+      "complianceLight": "GREEN",
+      "onTimePickupPct": 91,
+      "onTimeDeliveryPct": 90,
+      "claims": 0,
+      "loads": 134,
+      "score": 65.98,
+      "warnings": [],
+      "eligible": true
+     },
+     {
+      "vendorId": "BLUERIDGE",
+      "name": "Blue Ridge Transport",
+      "equipment": [
+       "V"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2027-07-11",
+      "complianceLight": "GREEN",
+      "onTimePickupPct": 90,
+      "onTimeDeliveryPct": 89,
+      "claims": 0,
+      "loads": 157,
+      "score": 65.74,
+      "warnings": [],
+      "eligible": true
+     },
+     {
+      "vendorId": "HIGHPLAIN",
+      "name": "High Plains Freightways",
+      "equipment": [
+       "F",
+       "SD"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2027-05-22",
+      "complianceLight": "RED",
+      "onTimePickupPct": 89,
+      "onTimeDeliveryPct": 88,
+      "claims": 0,
+      "loads": 96,
+      "score": 63.82,
+      "warnings": [
+       "DO NOT USE or incompatible equipment"
+      ],
+      "eligible": false
+     },
+     {
+      "vendorId": "RUSTYRIG",
+      "name": "Rusty Rig Transport Co.",
+      "equipment": [
+       "V",
+       "F"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2026-09-29",
+      "complianceLight": "YELLOW",
+      "onTimePickupPct": 87,
+      "onTimeDeliveryPct": 84,
+      "claims": 1,
+      "loads": 88,
+      "score": 56.46,
+      "warnings": [
+       "cargo insurance expired 2026-09-29"
+      ],
+      "eligible": true
+     },
+     {
+      "vendorId": "BADWOLF",
+      "name": "Bad Wolf Logistics LLC",
+      "equipment": [
+       "V"
+      ],
+      "status": "DO_NOT_USE",
+      "cargoExpires": "2027-03-13",
+      "complianceLight": "RED",
+      "onTimePickupPct": 71,
+      "onTimeDeliveryPct": 68,
+      "claims": 2,
+      "loads": 37,
+      "score": 39.24,
+      "warnings": [
+       "carrier status: DO_NOT_USE",
+       "DO NOT USE or incompatible equipment"
+      ],
+      "eligible": false
+     }
+    ],
+    "flags": [
+     "margin floor unreachable at historical rates",
+     "lumper policy: REQUIRED (driver assist LUMPER)",
+     "appointment lead time: 48 hours",
+     "OTIF program \u2014 chargeback 3% of PO value for arrivals after MABD; early delivery also non-compliant.",
+     "SEAL_REQUIRED",
+     "ID_REQUIRED",
+     "CHEP pallets",
+     "Reschedules < 24h before slot forfeit the slot; rebook via portal only.",
+     "portal credentials: never store"
+    ]
+   }
+  },
+  {
+   "type": "thought",
+   "text": "The shipment from Chicago, IL to Dallas, TX has a sell total of $3,479. The maximum linehaul we can offer is $2,084.28. The facility has strict compliance requirements, including an OTIF program with chargebacks for late deliveries. Let's start by negotiating with the top three eligible carriers and the budget carrier.\n\n### Top Carriers:\n1. **Lakeshore Carriers Inc.** - Score: 69.16\n2. **Prairie Haul Lines** - Score: 68.76\n3. **Gulfstream Express Carriers** - Score: 68.32\n\n### Budget Carrier:\n- **Rusty Rig Transport Co.** - Score: 56.46 (Compliance Light: YELLOW)\n\nI'll begin negotiations with Lakeshore Carriers Inc. at a competitive rate below the max linehaul."
+  },
+  {
+   "type": "tool_call",
+   "name": "negotiate",
+   "args": {
+    "carrier_id": "LAKESHORE",
+    "offer": 2000,
+    "message": "Offering $2000 for the Chicago to Dallas lane. Let us know if this works for you."
+   }
+  },
+  {
+   "type": "negotiation",
+   "carrierId": "LAKESHORE",
+   "from": "broker",
+   "text": "Offering $2000 for the Chicago to Dallas lane. Let us know if this works for you.",
+   "amount": 2000
+  },
+  {
+   "type": "negotiation",
+   "carrierId": "LAKESHORE",
+   "from": "carrier",
+   "text": "Can't do that. $2,416 and I'll put a truck on it.",
+   "amount": 2416
+  },
+  {
+   "type": "tool_result",
+   "name": "negotiate",
+   "ok": true,
+   "result": {
+    "accepted": false,
+    "counter": 2416,
+    "carrierSays": "Can't do that. $2,416 and I'll put a truck on it.",
+    "roundsUsed": 1,
+    "ceiling": 2084.28,
+    "counterAboveCeiling": true
+   }
+  },
+  {
+   "type": "thought",
+   "text": "Lakeshore Carriers Inc. countered at $2,416, which is above our ceiling. I'll counter back at the max linehaul of $2,084.28."
+  },
+  {
+   "type": "tool_call",
+   "name": "negotiate",
+   "args": {
+    "carrier_id": "LAKESHORE",
+    "offer": 2084.28,
+    "message": "We can offer a maximum of $2,084.28. Please let us know if this works."
+   }
+  },
+  {
+   "type": "negotiation",
+   "carrierId": "LAKESHORE",
+   "from": "broker",
+   "text": "We can offer a maximum of $2,084.28. Please let us know if this works.",
+   "amount": 2084.28
+  },
+  {
+   "type": "negotiation",
+   "carrierId": "LAKESHORE",
+   "from": "carrier",
+   "text": "Can't do that. $2,327 and I'll put a truck on it.",
+   "amount": 2327
+  },
+  {
+   "type": "tool_result",
+   "name": "negotiate",
+   "ok": true,
+   "result": {
+    "accepted": false,
+    "counter": 2327,
+    "carrierSays": "Can't do that. $2,327 and I'll put a truck on it.",
+    "roundsUsed": 2,
+    "ceiling": 2084.28,
+    "counterAboveCeiling": true
+   }
+  },
+  {
+   "type": "thought",
+   "text": "Lakeshore Carriers Inc. countered again above our ceiling. I'll now negotiate with Prairie Haul Lines."
+  },
+  {
+   "type": "tool_call",
+   "name": "negotiate",
+   "args": {
+    "carrier_id": "PRAIRIEHL",
+    "offer": 2000,
+    "message": "Offering $2000 for the Chicago to Dallas lane. Let us know if this works for you."
+   }
+  },
+  {
+   "type": "negotiation",
+   "carrierId": "PRAIRIEHL",
+   "from": "broker",
+   "text": "Offering $2000 for the Chicago to Dallas lane. Let us know if this works for you.",
+   "amount": 2000
+  },
+  {
+   "type": "negotiation",
+   "carrierId": "PRAIRIEHL",
+   "from": "carrier",
+   "text": "Can't do that. $2,377 and I'll put a truck on it.",
+   "amount": 2377
+  },
+  {
+   "type": "tool_result",
+   "name": "negotiate",
+   "ok": true,
+   "result": {
+    "accepted": false,
+    "counter": 2377,
+    "carrierSays": "Can't do that. $2,377 and I'll put a truck on it.",
+    "roundsUsed": 1,
+    "ceiling": 2084.28,
+    "counterAboveCeiling": true
+   }
+  },
+  {
+   "type": "thought",
+   "text": "Prairie Haul Lines countered at $2,377, which is also above our ceiling. I'll counter back at the max linehaul of $2,084.28."
+  },
+  {
+   "type": "tool_call",
+   "name": "negotiate",
+   "args": {
+    "carrier_id": "PRAIRIEHL",
+    "offer": 2084.28,
+    "message": "We can offer a maximum of $2,084.28. Please let us know if this works."
+   }
+  },
+  {
+   "type": "negotiation",
+   "carrierId": "PRAIRIEHL",
+   "from": "broker",
+   "text": "We can offer a maximum of $2,084.28. Please let us know if this works.",
+   "amount": 2084.28
+  },
+  {
+   "type": "negotiation",
+   "carrierId": "PRAIRIEHL",
+   "from": "carrier",
+   "text": "Can't do that. $2,289 and I'll put a truck on it.",
+   "amount": 2289
+  },
+  {
+   "type": "tool_result",
+   "name": "negotiate",
+   "ok": true,
+   "result": {
+    "accepted": false,
+    "counter": 2289,
+    "carrierSays": "Can't do that. $2,289 and I'll put a truck on it.",
+    "roundsUsed": 2,
+    "ceiling": 2084.28,
+    "counterAboveCeiling": true
+   }
+  },
+  {
+   "type": "thought",
+   "text": "Prairie Haul Lines also countered above our ceiling. I'll now negotiate with Gulfstream Express Carriers."
+  },
+  {
+   "type": "tool_call",
+   "name": "negotiate",
+   "args": {
+    "carrier_id": "GULFSTRMX",
+    "offer": 2000,
+    "message": "Offering $2000 for the Chicago to Dallas lane. Let us know if this works for you."
+   }
+  },
+  {
+   "type": "negotiation",
+   "carrierId": "GULFSTRMX",
+   "from": "broker",
+   "text": "Offering $2000 for the Chicago to Dallas lane. Let us know if this works for you.",
+   "amount": 2000
+  },
+  {
+   "type": "negotiation",
+   "carrierId": "GULFSTRMX",
+   "from": "carrier",
+   "text": "Can't do that. $2,363 and I'll put a truck on it.",
+   "amount": 2363
+  },
+  {
+   "type": "tool_result",
+   "name": "negotiate",
+   "ok": true,
+   "result": {
+    "accepted": false,
+    "counter": 2363,
+    "carrierSays": "Can't do that. $2,363 and I'll put a truck on it.",
+    "roundsUsed": 1,
+    "ceiling": 2084.28,
+    "counterAboveCeiling": true
+   }
+  },
+  {
+   "type": "thought",
+   "text": "Gulfstream Express Carriers countered at $2,363, which is above our ceiling. I'll counter back at the max linehaul of $2,084.28."
+  },
+  {
+   "type": "tool_call",
+   "name": "negotiate",
+   "args": {
+    "carrier_id": "GULFSTRMX",
+    "offer": 2084.28,
+    "message": "We can offer a maximum of $2,084.28. Please let us know if this works."
+   }
+  },
+  {
+   "type": "negotiation",
+   "carrierId": "GULFSTRMX",
+   "from": "broker",
+   "text": "We can offer a maximum of $2,084.28. Please let us know if this works.",
+   "amount": 2084.28
+  },
+  {
+   "type": "negotiation",
+   "carrierId": "GULFSTRMX",
+   "from": "carrier",
+   "text": "Can't do that. $2,276 and I'll put a truck on it.",
+   "amount": 2276
+  },
+  {
+   "type": "tool_result",
+   "name": "negotiate",
+   "ok": true,
+   "result": {
+    "accepted": false,
+    "counter": 2276,
+    "carrierSays": "Can't do that. $2,276 and I'll put a truck on it.",
+    "roundsUsed": 2,
+    "ceiling": 2084.28,
+    "counterAboveCeiling": true
+   }
+  },
+  {
+   "type": "thought",
+   "text": "Gulfstream Express Carriers also countered above our ceiling. I'll now negotiate with Rusty Rig Transport Co., the budget carrier."
+  },
+  {
+   "type": "tool_call",
+   "name": "negotiate",
+   "args": {
+    "carrier_id": "RUSTYRIG",
+    "offer": 2000,
+    "message": "Offering $2000 for the Chicago to Dallas lane. Let us know if this works for you."
+   }
+  },
+  {
+   "type": "negotiation",
+   "carrierId": "RUSTYRIG",
+   "from": "broker",
+   "text": "Offering $2000 for the Chicago to Dallas lane. Let us know if this works for you.",
+   "amount": 2000
+  },
+  {
+   "type": "negotiation",
+   "carrierId": "RUSTYRIG",
+   "from": "carrier",
+   "text": "We accept $2,000 linehaul. Please issue the rate confirmation.",
+   "amount": 2000
+  },
+  {
+   "type": "tool_result",
+   "name": "negotiate",
+   "ok": true,
+   "result": {
+    "accepted": true,
+    "agreedLinehaul": 2000,
+    "carrierSays": "We accept $2,000 linehaul. Please issue the rate confirmation.",
+    "roundsUsed": 1,
+    "ceiling": 2084.28
+   }
+  },
+  {
+   "type": "tool_call",
+   "name": "cover",
+   "args": {
+    "shipment_id": "7300176",
+    "carrier_id": "RUSTYRIG",
+    "amount": 2000
+   }
+  },
+  {
+   "type": "tool_result",
+   "name": "cover",
+   "ok": false,
+   "result": {
+    "error": "409 conflict",
+    "detail": "Carrier RUSTYRIG cargo insurance expired 2026-09-29"
+   }
+  },
+  {
+   "type": "thought",
+   "text": "Rusty Rig Transport Co. cannot be covered due to expired cargo insurance. I'll request approval for the most reliable carrier's best price. Lakeshore Carriers Inc. offered $2,327, which is the best option considering their reliability."
+  },
+  {
+   "type": "tool_call",
+   "name": "request_approval",
+   "args": {
+    "carrier_id": "LAKESHORE",
+    "offer": 2327,
+    "reason": "Lakeshore Carriers Inc. is the most reliable option with a high on-time delivery rate, crucial for OTIF compliance."
+   }
+  },
+  {
+   "type": "approval_needed",
+   "runId": "run_mwfawpu7_viqt2",
+   "reason": "LAKESHORE: Lakeshore Carriers Inc. is the most reliable option with a high on-time delivery rate, crucial for OTIF compliance.",
+   "numbers": {
+    "offer": 2327,
+    "maxLinehaul": 2084.28,
+    "overCeiling": 242.72,
+    "sell": 3479,
+    "buyTotal": 3095.5,
+    "resultingGpPct": 11.02,
+    "gpWithDetentionPct": 8.65,
+    "floorPct": 18,
+    "recommendedSell": 3875.61
+   }
+  },
+  {
+   "type": "tool_result",
+   "name": "request_approval",
+   "ok": true,
+   "result": {
+    "status": "PAUSED_FOR_HUMAN",
+    "numbers": {
+     "offer": 2327,
+     "maxLinehaul": 2084.28,
+     "overCeiling": 242.72,
+     "sell": 3479,
+     "buyTotal": 3095.5,
+     "resultingGpPct": 11.02,
+     "gpWithDetentionPct": 8.65,
+     "floorPct": 18,
+     "recommendedSell": 3875.61
+    }
+   }
+  }
+ ],
+ "post": [
+  {
+   "type": "thought",
+   "text": "\u2705 Human APPROVED a linehaul of up to $2327.00 for LAKESHORE (resulting GP 11.02%). LAKESHORE has not accepted yet: negotiate at exactly $2327.00, then cover and finish the post-cover steps. Then escalate_to_sales."
+  },
+  {
+   "type": "tool_call",
+   "name": "negotiate",
+   "args": {
+    "carrier_id": "LAKESHORE",
+    "offer": 2327,
+    "message": "Approval received for $2,327. Please confirm acceptance."
+   }
+  },
+  {
+   "type": "negotiation",
+   "carrierId": "LAKESHORE",
+   "from": "broker",
+   "text": "Approval received for $2,327. Please confirm acceptance.",
+   "amount": 2327
+  },
+  {
+   "type": "negotiation",
+   "carrierId": "LAKESHORE",
+   "from": "carrier",
+   "text": "$2,327 works. Send the rate con.",
+   "amount": 2327
+  },
+  {
+   "type": "tool_result",
+   "name": "negotiate",
+   "ok": true,
+   "result": {
+    "accepted": true,
+    "agreedLinehaul": 2327,
+    "carrierSays": "$2,327 works. Send the rate con.",
+    "roundsUsed": 3,
+    "ceiling": 2327
+   }
+  },
+  {
+   "type": "tool_call",
+   "name": "cover",
+   "args": {
+    "shipment_id": "7300176",
+    "carrier_id": "LAKESHORE",
+    "amount": 2327
+   }
+  },
+  {
+   "type": "tool_result",
+   "name": "cover",
+   "ok": true,
+   "result": {
+    "shipment_id": "7300176",
+    "status": "COVERED",
+    "sell_total": 3479,
+    "buy_total": 2327,
+    "gp_amount": 1152,
+    "gp_pct": 33.1
+   }
+  },
+  {
+   "type": "tool_call",
+   "name": "add_cost",
+   "args": {
+    "shipment_id": "7300176",
+    "charge_code": "FSC"
+   }
+  },
+  {
+   "type": "tool_result",
+   "name": "add_cost",
+   "ok": true,
+   "result": {
+    "shipment_id": "7300176",
+    "status": "COVERED",
+    "sell_total": 3479,
+    "buy_total": 2854.25,
+    "gp_amount": 624.75,
+    "gp_pct": 18
+   }
+  },
+  {
+   "type": "tool_call",
+   "name": "add_cost",
+   "args": {
+    "shipment_id": "7300176",
+    "charge_code": "LUM"
+   }
+  },
+  {
+   "type": "tool_result",
+   "name": "add_cost",
+   "ok": true,
+   "result": {
+    "shipment_id": "7300176",
+    "status": "COVERED",
+    "sell_total": 3479,
+    "buy_total": 3095.5,
+    "gp_amount": 383.5,
+    "gp_pct": 11
+   }
+  },
+  {
+   "type": "tool_call",
+   "name": "generate_rate_con",
+   "args": {
+    "shipment_id": "7300176"
+   }
+  },
+  {
+   "type": "tool_result",
+   "name": "generate_rate_con",
+   "ok": true,
+   "result": {
+    "doc": {
+     "doc_id": "doc_81ab4e3a5dc94012b43b",
+     "file_name": "RateCon_7300176_3.pdf"
+    },
+    "shipment_id": "7300176",
+    "status": "COVERED",
+    "sell_total": 3479,
+    "buy_total": 3095.5,
+    "gp_amount": 383.5,
+    "gp_pct": 11,
+    "rate_con_number": "RC-7300176-3"
+   }
+  },
+  {
+   "type": "tool_call",
+   "name": "request_appointment",
+   "args": {
+    "shipment_id": "7300176",
+    "stop_seq": 2,
+    "earliest_local": "2026-11-19T06:00:00",
+    "latest_local": "2026-11-19T14:00:00"
+   }
+  },
+  {
+   "type": "tool_result",
+   "name": "request_appointment",
+   "ok": true,
+   "result": {
+    "shipment_id": "7300176",
+    "status": "COVERED",
+    "sell_total": 3479,
+    "buy_total": 3095.5,
+    "gp_amount": 383.5,
+    "gp_pct": 11,
+    "rate_con_number": "RC-7300176-3"
+   }
+  },
+  {
+   "type": "tool_call",
+   "name": "add_note",
+   "args": {
+    "shipment_id": "7300176",
+    "why": "Lakeshore Carriers Inc. was chosen for their reliability and high on-time delivery rate, crucial for OTIF compliance."
+   }
+  },
+  {
+   "type": "tool_result",
+   "name": "add_note",
+   "ok": true,
+   "result": {
+    "saved": true,
+    "note": "[Coverage Agent] Covered by LAKESHORE at $2,327.00 linehaul vs $2,084.28 ceiling (18% floor), human-approved +$242.72.\nBuy $3,095.50 = linehaul + FSC $527.25 + LUM $241.25 \u2192 GP 11.02% (8.65% incl. expected detention $82.50, 3.1 h dwell).\nRecovered: RUSTYRIG rejected by TMS \u2014 Carrier RUSTYRIG cargo insurance expired 2026-09-29\nAppointment requested 11-19 06:00\u201314:00 America/Chicago; a human books it in the portal.\nWhy: Lakeshore Carriers Inc. was chosen for their reliability and high on-time delivery rate, crucial for OTIF compliance."
+   }
+  },
+  {
+   "type": "tool_call",
+   "name": "escalate_to_sales",
+   "args": {
+    "shipment_id": "7300176",
+    "context": "The margin floor is unreachable at historical rates, suggesting a need for lane repricing."
+   }
+  },
+  {
+   "type": "tool_result",
+   "name": "escalate_to_sales",
+   "ok": true,
+   "result": {
+    "escalated": true,
+    "note": "[Coverage Agent \u2192 Sales] Reprice Chicago, IL \u2192 Dallas, TX (NORTHSTAR \u2192 BBR-DC135).\nLane history: 8 loads at $2.29/mi, avg GP 14.76% vs 18% floor; market linehaul $2,270.00.\nAt today's buy ($2,327.00 linehaul + dock costs) GP is 8.65% incl. detention; to hold 18% the sell needs to be \u2265 $3,875.61 (now $3,479.00).\nContext: The margin floor is unreachable at historical rates, suggesting a need for lane repricing."
+   }
+  },
+  {
+   "type": "done",
+   "summary": "The shipment has been successfully covered with Lakeshore Carriers Inc. at a linehaul of $2,327, following human approval. All post-cover steps, including adding costs, generating the rate confirmation, and requesting the delivery appointment, have been completed. The margin floor is unreachable at historical rates, so I've escalated this to sales for potential lane repricing.",
+   "protected$": 323.75
+  }
+ ],
+ "reject": [
+  {
+   "type": "thought",
+   "text": "\u26d4 Human REJECTED going above the $2084.28 ceiling. Do not cover. Write a note explaining why the load is still open, and escalate_to_sales with the repricing case."
+  },
+  {
+   "type": "tool_call",
+   "name": "add_note",
+   "args": {
+    "shipment_id": "7300176",
+    "why": "All carriers countered above the ceiling, and approval to exceed the ceiling was rejected. The load remains open."
+   }
+  },
+  {
+   "type": "tool_result",
+   "name": "add_note",
+   "ok": true,
+   "result": {
+    "saved": true,
+    "note": "[Coverage Agent] NOT covered: no carrier within the $2,084.28 ceiling; best quote GULFSTRMX $2,276.00 (over-ceiling approval declined).\nBuy $3,044.50 = linehaul + FSC $527.25 + LUM $241.25 \u2192 GP 12.49% (10.12% incl. expected detention $82.50, 3.1 h dwell).\nRecovered: RUSTYRIG rejected by TMS \u2014 Carrier RUSTYRIG cargo insurance expired 2026-09-29\nWhy: All carriers countered above the ceiling, and approval to exceed the ceiling was rejected. The load remains open."
+   }
+  },
+  {
+   "type": "tool_call",
+   "name": "escalate_to_sales",
+   "args": {
+    "shipment_id": "7300176",
+    "context": "The margin floor is unreachable at historical rates, and all carrier offers exceeded the ceiling. Recommend repricing the lane."
+   }
+  },
+  {
+   "type": "tool_result",
+   "name": "escalate_to_sales",
+   "ok": true,
+   "result": {
+    "escalated": true,
+    "note": "[Coverage Agent \u2192 Sales] Reprice Chicago, IL \u2192 Dallas, TX (NORTHSTAR \u2192 BBR-DC135).\nLane history: 8 loads at $2.29/mi, avg GP 14.76% vs 18% floor; market linehaul $2,270.00.\nAt today's buy ($2,276.00 linehaul + dock costs) GP is 10.12% incl. detention; to hold 18% the sell needs to be \u2265 $3,813.41 (now $3,479.00).\nContext: The margin floor is unreachable at historical rates, and all carrier offers exceeded the ceiling. Recommend repricing the lane."
+   }
+  },
+  {
+   "type": "done",
+   "summary": "The load remains open because all carrier offers exceeded the ceiling, and approval to go above was rejected. I've escalated the issue to sales for lane repricing, as the margin floor is unreachable at historical rates."
+  }
+ ]
+}
