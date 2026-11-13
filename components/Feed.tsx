@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { AgentEvent } from "@/lib/types";
+import type { AgentEvent, LoadBrief } from "@/lib/types";
 import { usd } from "./format";
 
 function Json({ value }: { value: unknown }) {
@@ -54,13 +54,13 @@ function ToolResult({ e, recovered }: { e: Extract<AgentEvent, { type: "tool_res
   );
 }
 
-function Bubble({ e }: { e: Extract<AgentEvent, { type: "negotiation" }> }) {
+function Bubble({ e, name }: { e: Extract<AgentEvent, { type: "negotiation" }>; name?: string }) {
   const broker = e.from === "broker";
   return (
     <div className={`flex ${broker ? "justify-end" : "justify-start"}`}>
       <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${broker ? "rounded-br-sm bg-emerald-400/15 text-emerald-50" : "rounded-bl-sm bg-white/[0.07] text-slate-100"}`}>
         <div className="mb-0.5 flex items-center justify-between gap-4 text-[10px] uppercase tracking-widest text-slate-400">
-          <span>{broker ? "Broker agent" : e.carrierId}</span>
+          <span>{broker ? `Broker agent → ${name ?? e.carrierId}` : name ? `${name} · ${e.carrierId}` : e.carrierId}</span>
           {e.amount != null && <span className="font-mono text-sm font-semibold normal-case tracking-normal text-white">{usd(e.amount)}</span>}
         </div>
         <p className="text-sm leading-snug">{e.text}</p>
@@ -71,6 +71,9 @@ function Bubble({ e }: { e: Extract<AgentEvent, { type: "negotiation" }> }) {
 
 export default function Feed({ events, error }: { events: AgentEvent[]; error: string | null }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Carrier display names from the load brief, so bubbles read "Rusty Rig Transport Co. · RUSTYRIG".
+  const brief = events.find((x) => x.type === "tool_result" && x.name === "get_load_brief" && x.ok);
+  const names: Record<string, string> = Object.fromEntries(((brief?.type === "tool_result" ? (brief.result as LoadBrief).carriers : undefined) ?? []).map((c) => [c.vendorId, c.name]));
   useEffect(() => { ref.current?.scrollTo({ top: ref.current.scrollHeight, behavior: "smooth" }); }, [events.length, error]);
   return (
     <main className="flex min-h-0 flex-col">
@@ -91,7 +94,7 @@ export default function Feed({ events, error }: { events: AgentEvent[]; error: s
               return <p key={k} className="animate-[fadein_.35s_ease-out] border-l-2 border-slate-600 pl-4 text-[15px] leading-relaxed text-slate-300">{e.text}</p>;
             case "tool_call": return <div key={k} className="animate-[fadein_.35s_ease-out]"><ToolCall e={e} /></div>;
             case "tool_result": return <div key={k} className="animate-[fadein_.35s_ease-out]"><ToolResult e={e} recovered={events.slice(i + 1).some((x) => x.type === "tool_call" || x.type === "negotiation")} /></div>;
-            case "negotiation": return <div key={k} className="animate-[fadein_.35s_ease-out]"><Bubble e={e} /></div>;
+            case "negotiation": return <div key={k} className="animate-[fadein_.35s_ease-out]"><Bubble e={e} name={names[e.carrierId]} /></div>;
             case "approval_needed":
               return <div key={k} className="rounded-xl border border-amber-400/50 bg-amber-400/10 p-4 text-sm text-amber-100"><b>Paused for human approval.</b> {e.reason}</div>;
             case "done":
