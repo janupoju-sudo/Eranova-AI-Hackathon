@@ -382,7 +382,9 @@ export function createTools(ctx: ToolContext) {
           floorPct: brief.margin.floorPct,
           recommendedSell: p.recommendedSell,
         };
-        const fullReason = `${carrier_id}: ${reason}`;
+        // Warnings come from the brief, not the model, so the human always sees them.
+        const warnings = brief.carriers.find((c) => c.vendorId === carrier_id)?.warnings ?? [];
+        const fullReason = `${carrier_id}: ${reason}${warnings.length ? ` ⚠ Carrier warnings: ${warnings.join("; ")}` : ""}`;
         state.approvalPending = { carrierId: carrier_id, reason: fullReason, numbers };
         emit({ type: "approval_needed", runId: state.runId, reason: fullReason, numbers });
         return { ok: true, result: { status: "PAUSED_FOR_HUMAN", numbers } };

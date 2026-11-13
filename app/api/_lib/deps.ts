@@ -8,8 +8,7 @@ import { devRespond } from "./devDeps";
 export { tms };
 
 export const deps: ToolDeps = {
-  // shortcut: hero fixture only — live loadBriefResult 404s (intel reads delivery_facility_id; TMS has stops[].facility_id). Drop `fixture` once Akshaya fixes it.
-  loadBrief: (id) => loadBriefResult(id, { fixture: true }),
+  loadBrief: (id) => loadBriefResult(id),
   carrier: { respond: devRespond }, // swap for lib/carrierSim.ts when Advika lands it
   tms,
 };

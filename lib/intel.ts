@@ -32,6 +32,66 @@ export interface IntelSource {
   listVendors(filters: Record<string, string>): Promise<TmsResult<Vendor[]>>;
   rateEngine(body: unknown): Promise<TmsResult<{ rate_id: string; market_context: { low_linehaul: number; target_linehaul: number; high_linehaul: number } }>>;
 }
+// ---------- Live adapter: real Meridian wire format → the interfaces above (verified 2026-11-13) ----------
+type Raw = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+const mapOk = <A, B>(r: TmsResult<A>, f: (a: A) => B): TmsResult<B> => (r.ok ? { ok: true, result: f(r.result) } : r);
+const window = (w: Raw | undefined) => ({ start: w?.earliest_local, end: w?.latest_local, tz: w?.timezone });
+const toShipment = (s: Raw): Shipment => {
+  const stops: Raw[] = s.stops ?? [];
+  const pick = stops.find(x => x.stop_type === "PICKUP") ?? stops[0];
+  const drop = [...stops].reverse().find(x => x.stop_type === "DELIVERY") ?? stops.at(-1);
+  const charges: Raw[] = (s.customer_charges ?? []).filter((c: Raw) => c.status !== "CANCELLED");
+  return {
+    id: s.shipment_id, customer_id: s.customer_id, status: s.status, mode: s.mode, equipment: s.equipment_type,
+    origin: { city: s.shipper_city, state: s.shipper_state }, destination: { city: s.consignee_city, state: s.consignee_state },
+    miles: s.miles, weight_lb: s.freight_totals?.actual_lb, delivery_facility_id: drop?.facility_id,
+    pickup_window: window(pick?.scheduled_window), delivery_window: window(drop?.scheduled_window), mabd_date: drop?.mabd_date ?? null,
+    sell: { total: s.sell_total, lines: charges.map(c => ({ code: c.charge_code, amount: c.amount })) },
+    costs: (s.vendor_costs ?? []).map((c: Raw) => ({ id: c.cost_id, charge_code: c.charge_code, amount: c.amount, status: c.status, description: c.description })),
+    gp_pct: s.gp_pct ?? null,
+  };
+};
+const toHours = (h: Raw | undefined) => {
+  if (!h) return null;
+  const spans = Object.entries(h).map(([d, v]: [string, Raw]) => `${d} ${v.open}–${v.close}`);
+  const same = new Set(Object.values(h).map((v: Raw) => `${v.open}–${v.close}`));
+  return same.size === 1 ? `${Object.keys(h).join("/")} ${[...same][0]}` : spans.join(", ");
+};
+const toFacility = (f: Raw): Facility => ({
+  id: f.facility_id, avg_unload_min: f.avg_unload_minutes ?? null, grace_min: f.appointment_grace_minutes ?? null,
+  lumper_policy: f.lumper_policy ? `${f.lumper_policy}${f.driver_assist ? ` (driver assist ${f.driver_assist})` : ""}` : null,
+  lumper_fee_range: f.lumper_fee_min != null && f.lumper_fee_max != null ? [f.lumper_fee_min, f.lumper_fee_max] : null,
+  lead_time_hours: f.appointment_lead_time_hours ?? null, mabd_program_note: f.mabd_program_note ?? null,
+  receiving_hours: toHours(f.receiving_hours),
+  compliance_flags: [...(f.compliance_flags ?? []), ...(f.pallet_exchange ? [`${f.pallet_exchange} pallets`] : []), ...(f.reschedule_policy_note ? [f.reschedule_policy_note] : [])],
+  notes: (f.notes ?? []).map((n: Raw) => `${String(n.timestamp ?? "").slice(0, 10)}: ${n.text}`),
+});
+const toVendor = (v: Raw): Vendor => ({
+  id: v.vendor_id, name: v.legal_name, equipment: v.equipment_types ?? [], status: v.status,
+  insurance: (v.insurance ?? []).map((i: Raw) => ({ type: i.policy_type, expires: i.expiration_date })),
+  on_time_pickup_pct: v.on_time_pickup_pct ?? null, on_time_delivery_pct: v.on_time_delivery_pct ?? null,
+  claims: v.claims_count ?? null, loads: v.loads_completed ?? null,
+});
+export const liveSource: IntelSource = {
+  getShipment: async id => mapOk(await tms.getShipment<Raw>(id), toShipment),
+  getFacility: async id => mapOk(await tms.getFacility<Raw>(id), toFacility),
+  getCustomer: id => tms.getCustomer(id),
+  // Rows only carry a "City, ST → City, ST" lane string; enough for the pre-filter, details are fetched per load.
+  getFacilityShipments: async id => mapOk(await tms.getFacilityShipments<Raw>(id), rows => rows.filter(r => r.role === "DELIVERY").map(r => {
+    const [city, state] = String(r.lane ?? "").split("→")[0].split(",").map(x => x.trim());
+    return { id: r.shipment_id, customer_id: r.customer_id, status: r.status, origin: { city, state } } as Shipment;
+  })),
+  listVendors: async filters => mapOk(await tms.listVendors<Raw>(filters), rows => rows.map(toVendor)),
+  // market_context is all-in (linehaul + FSC); the brief's market is linehaul-only.
+  rateEngine: async body => mapOk(await tms.rateEngine<Raw>(body), q => {
+    const fsc = (q.lines ?? []).filter((l: Raw) => l.charge_code === "FSC").reduce((t: number, l: Raw) => t + l.amount, 0);
+    const m = q.market_context ?? {};
+    return { rate_id: q.rate_id, market_context: { low_linehaul: money(m.low - fsc), target_linehaul: money(m.target - fsc), high_linehaul: money(m.high - fsc) } };
+  }),
+};
+
+/** Company-wide margin floor; a customer floor can only raise it (team decision 2026-11-13, PRD §5). */
+export const COMPANY_FLOOR_PCT = 18;
 const money = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 const average = (values: number[]) => values.length ? money(values.reduce((sum, value) => sum + value, 0) / values.length) : null;
 const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
@@ -98,7 +158,7 @@ export function computeBrief(shipment: Shipment, facility: Facility, floorPct: n
 
 export async function loadBriefResult(shipmentId: string, options: { fixture?: boolean; source?: IntelSource } = {}): Promise<TmsResult<LoadBrief>> {
   if (options.fixture) return shipmentId === hero.shipmentId ? { ok: true, result: structuredClone(hero) as LoadBrief } : { ok: false, status: 404, error: "FIXTURE_NOT_FOUND", detail: "Only the hero shipment fixture is available." };
-  const source: IntelSource = options.source ?? tms;
+  const source: IntelSource = options.source ?? liveSource;
   try {
     const shipment = await source.getShipment(shipmentId);
     if (!shipment.ok) return shipment;
@@ -121,7 +181,7 @@ export async function loadBriefResult(shipmentId: string, options: { fixture?: b
     if (!quote.ok) return quote;
     const context = quote.result.market_context;
     if (![context.low_linehaul, context.target_linehaul, context.high_linehaul].every(finite)) throw new Error("Invalid market context");
-    return { ok: true, result: computeBrief(s, facility.result, customer.result.margin_floor_pct ?? 18, details, vendors.result, { low: context.low_linehaul, target: context.target_linehaul, high: context.high_linehaul, rateId: quote.result.rate_id }) };
+    return { ok: true, result: computeBrief(s, facility.result, Math.max(customer.result.margin_floor_pct ?? 0, COMPANY_FLOOR_PCT), details, vendors.result, { low: context.low_linehaul, target: context.target_linehaul, high: context.high_linehaul, rateId: quote.result.rate_id }) };
   } catch {
     return { ok: false, status: 502, error: "INVALID_TMS_DATA", detail: "Response does not match the required shipment, facility, vendor or quote schema. Verify the Meridian API contract." };
   }
