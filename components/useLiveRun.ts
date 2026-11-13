@@ -58,12 +58,12 @@ export function useLiveRun() {
     }
   }, []);
 
-  const start = useCallback(() => {
+  const start = useCallback((shipmentId?: string) => {
     setEvents([]);
     setError(null);
     runIdRef.current = null;
     setStatus("running");
-    void stream("/api/run", {});
+    void stream("/api/run", { shipmentId });
   }, [stream]);
 
   const decide = useCallback((approved: boolean) => {
