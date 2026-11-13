@@ -30,10 +30,10 @@ function Row({ c, s, detailed }: { c: CarrierCandidate; s?: Status; detailed?: b
   const rejected = s?.t.startsWith("409");
   return (
     <li className={`rounded-lg border px-3 py-2 ${rejected ? "border-rose-500/50 bg-rose-500/10" : c.eligible ? "border-white/10 bg-white/[0.02]" : "border-white/5 opacity-50"}`}>
-      <div className="flex items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-2">
+      <div className="flex items-start justify-between gap-2">
+        <span className="flex min-w-0 items-start gap-2">
           <span className="shrink-0 rounded bg-white/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold tracking-wide text-slate-100">{c.vendorId}</span>
-          <span className="truncate text-sm font-medium">{c.name}</span>
+          <span className="text-sm font-medium leading-snug">{c.name}</span>
         </span>
         <span className={`shrink-0 text-xs ${s?.c ?? "text-slate-500"}`}>{s?.t ?? (c.eligible ? "not contacted" : "blocked")}</span>
       </div>
