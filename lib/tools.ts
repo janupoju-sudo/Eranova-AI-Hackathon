@@ -441,6 +441,15 @@ function bestQuote(state: RunState): { carrierId: string; amount: Money } | null
   return best;
 }
 
+/** The TMS activity log shows notes as one paragraph, so every line must end as a sentence. */
+function sentences(lines: string[]): string {
+  return lines
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((l) => (/[.!?]$/.test(l) ? l : `${l}.`))
+    .join("\n");
+}
+
 export function decisionNote(state: RunState, brief: LoadBrief, why: string): string {
   const cap = brief.margin.maxLinehaul;
   const lines: string[] = [];
@@ -459,17 +468,17 @@ export function decisionNote(state: RunState, brief: LoadBrief, why: string): st
   if (failed.length) lines.push(`Recovered: ${failed.map(([id, d]) => `${id} rejected by TMS — ${d}`).join("; ")}`);
   if (state.appointment) lines.push(`Appointment requested ${state.appointment.start.replace("T", " ").slice(5, 16)}–${state.appointment.end.slice(11, 16)} ${state.appointment.tz}; a human books it in the portal.`);
   lines.push(`Why: ${why}`);
-  return lines.join("\n");
+  return sentences(lines);
 }
 
 export function salesNote(state: RunState, brief: LoadBrief, context: string): string {
   const h = brief.laneHistory;
   const linehaul = state.coveredBy?.amount ?? bestQuote(state)?.amount ?? brief.market?.target ?? brief.margin.maxLinehaul;
   const p = priceImpact(brief, linehaul);
-  return [
+  return sentences([
     `[Coverage Agent → Sales] Reprice ${brief.lane.origin} → ${brief.lane.destination} (${brief.customerId} → ${brief.facility.id}).`,
     `Lane history: ${h.loads} loads${h.avgLinehaulPerMile != null ? ` at $${h.avgLinehaulPerMile}/mi` : ""}${h.avgGpPct != null ? `, avg GP ${h.avgGpPct}%` : ""} vs ${brief.margin.floorPct}% floor${brief.market ? `; market linehaul ${usd(brief.market.target)}` : ""}.`,
     `At today's buy (${usd(linehaul)} linehaul + dock costs) GP is ${p.gpWithDetentionPct}% incl. detention; to hold ${brief.margin.floorPct}% the sell needs to be ≥ ${usd(p.recommendedSell)} (now ${usd(brief.sell.total)}).`,
     `Context: ${context}`,
-  ].join("\n");
+  ]);
 }
