@@ -26,21 +26,32 @@ function statuses(events: AgentEvent[]): Record<string, Status> {
   return out;
 }
 
-function Row({ c, s }: { c: CarrierCandidate; s?: Status }) {
+function Row({ c, s, detailed }: { c: CarrierCandidate; s?: Status; detailed?: boolean }) {
   const rejected = s?.t.startsWith("409");
   return (
     <li className={`rounded-lg border px-3 py-2 ${rejected ? "border-rose-500/50 bg-rose-500/10" : c.eligible ? "border-white/10 bg-white/[0.02]" : "border-white/5 opacity-50"}`}>
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate text-sm font-medium">{c.name}</span>
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0 rounded bg-white/10 px-1.5 py-0.5 font-mono text-[11px] font-semibold tracking-wide text-slate-100">{c.vendorId}</span>
+          <span className="truncate text-sm font-medium">{c.name}</span>
+        </span>
         <span className={`shrink-0 text-xs ${s?.c ?? "text-slate-500"}`}>{s?.t ?? (c.eligible ? "not contacted" : "blocked")}</span>
       </div>
       <div className="mt-0.5 flex items-center justify-between gap-2 text-[11px] text-slate-400">
-        <span className="font-mono">{c.vendorId}</span>
+        <span>{c.status === "ACTIVE" ? "Active" : c.status.replaceAll("_", " ")} · score {c.score}</span>
         <span>
           {c.onTimeDeliveryPct ?? "—"}% on-time · {c.claims ?? 0} claims
           {c.expectedChargeback$ != null && <span className="text-amber-200" title="(1 − on-time %) × OTIF chargeback % × PO value"> · OTIF risk {usd(c.expectedChargeback$)}</span>}
         </span>
       </div>
+      {detailed && (
+        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-[11px] text-slate-400">
+          <span>{c.onTimePickupPct ?? "—"}% on-time pickup</span>
+          <span>{c.loads ?? 0} loads hauled</span>
+          <span>cargo insurance {c.cargoExpires ? `to ${c.cargoExpires}` : "not on file"}</span>
+          <span>equipment {c.equipment.join(", ") || "—"}</span>
+        </div>
+      )}
       {c.warnings.length > 0 && (
         <div className="mt-1 flex flex-wrap gap-1">
           {c.warnings.map((w) => <span key={w} className="rounded bg-amber-400/15 px-1.5 py-0.5 text-[10px] text-amber-200">⚠ {w}</span>)}
@@ -50,7 +61,7 @@ function Row({ c, s }: { c: CarrierCandidate; s?: Status }) {
   );
 }
 
-export default function Carriers({ brief, events }: { brief: LoadBrief; events: AgentEvent[] }) {
+export default function Carriers({ brief, events, detailed }: { brief: LoadBrief; events: AgentEvent[]; detailed?: boolean }) {
   const st = statuses(events);
   return (
     <div>
@@ -58,7 +69,7 @@ export default function Carriers({ brief, events }: { brief: LoadBrief; events: 
       {brief.risk.chargebackPct != null && (
         <p className="mb-2 text-[10px] text-slate-500">OTIF risk = late rate × {brief.risk.chargebackPct}% of {brief.risk.poValueAssumed ? "assumed " : ""}PO value {usd(brief.risk.poValue$)}</p>
       )}
-      <ul className="space-y-1.5">{brief.carriers.map((c) => <Row key={c.vendorId} c={c} s={st[c.vendorId]} />)}</ul>
+      <ul className="space-y-1.5">{brief.carriers.map((c) => <Row key={c.vendorId} c={c} s={st[c.vendorId]} detailed={detailed} />)}</ul>
     </div>
   );
 }

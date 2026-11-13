@@ -8,6 +8,7 @@ import Feed from "@/components/Feed";
 import Header from "@/components/Header";
 import Queue, { type Outcome } from "@/components/Queue";
 import { useLiveRun } from "@/components/useLiveRun";
+import { usePreviewBrief } from "@/components/usePreviewBrief";
 import { useQueue } from "@/components/useQueue";
 import { useReplay } from "@/components/useReplay";
 import type { LoadBrief } from "@/lib/types";
@@ -59,6 +60,9 @@ export default function Page() {
   const outcome: Outcome = status !== "done" ? null : cover ? (dry ? "dryrun" : "covered") : "escalated";
   const heroId = brief?.shipmentId ?? selected ?? queue.items.find((l) => l.customerId === "NORTHSTAR" && l.lane.startsWith("Chicago") && l.lane.includes("Dallas"))?.shipmentId ?? null;
 
+  // Before a run: the selected load's carriers, read-only, so the broker sees who is on file up front.
+  const preview = usePreviewBrief(mode, heroId, brief == null);
+
   const onReset = () => { run.reset(); setResetKey((k) => k + 1); };
   const busy = status === "running" || status === "awaiting";
   const onSelect = (id: string) => { if (busy) return; run.reset(); setSelected(id); };
@@ -71,7 +75,7 @@ export default function Page() {
         <Header status={status} protectedUsd={protectedUsd} mode={mode} onMode={onMode} onStart={onStart} autonomy={mode === "live" ? autonomy : undefined} onAutonomy={busy ? undefined : setAutonomy} onReset={onReset} />
         <div className="grid min-h-0 grid-cols-[260px_minmax(0,1fr)_440px]">
           <Queue items={queue.items} heroId={heroId} status={status} outcome={outcome} loading={queue.loading} error={queue.error} onSelect={mode === "live" && !busy ? onSelect : undefined} />
-          <Economics brief={brief} offer={offer} events={events} />
+          <Economics brief={brief} offer={offer} events={events} preview={preview} />
           <Feed events={events} error={error} />
         </div>
         {status === "awaiting" && approval && <ApprovalPanel approval={approval} onApprove={run.approve} onReject={run.reject} />}
