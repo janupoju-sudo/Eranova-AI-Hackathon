@@ -9,11 +9,16 @@ export interface QueueItem {
   sell: number | null;
   mode: string | null;
   equipment: string | null;
+  carrierId: string | null;
+  buy: number | null;
+  gpPct: number | null;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  // ?status=COVERED lists loads that already have a carrier (read-only). Default: BOOKED loads waiting for one.
+  const status = new URL(req.url).searchParams.get("status") === "COVERED" ? "COVERED" : "BOOKED";
   // TL only: LTL needs a PRO number and freight-line rating the agent does not handle.
-  const r = await tms.listShipments<Record<string, unknown>>({ status: "BOOKED", mode: "TL", limit: 50 });
+  const r = await tms.listShipments<Record<string, unknown>>({ status, mode: "TL", limit: 50 });
   if (!r.ok) return Response.json(r, { status: r.status || 502 });
   const items = r.result.slice(0, 50).map(
     (s): QueueItem => ({
@@ -24,6 +29,9 @@ export async function GET() {
       sell: (s.sell_total as number) ?? null,
       mode: (s.mode as string) ?? null,
       equipment: (s.equipment_type as string) ?? null,
+      carrierId: (s.carrier_id as string) ?? null,
+      buy: (s.buy_total as number) ?? null,
+      gpPct: (s.gp_pct as number) ?? null,
     }),
   );
   return Response.json({ ok: true, items });

@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import type { RunStatus } from "./useReplay";
 import type { QueueLoad } from "./useQueue";
 import { shortDate, usd } from "./format";
@@ -15,16 +18,71 @@ function chip(isHero: boolean, status: RunStatus, outcome: Outcome) {
   return { t: "BOOKED", c: "bg-stone-100 text-stone-500" };
 }
 
+const TMS_UI = process.env.NEXT_PUBLIC_TMS_UI_URL?.replace(/\/$/, "");
+
+type CoveredLoad = QueueLoad & { carrierId?: string | null; buy?: number | null; gpPct?: number | null };
+
+/** Loads that already have a carrier, read straight from the TMS each time the tab is opened. */
+function Covered({ refreshKey }: { refreshKey: string }) {
+  const [res, setRes] = useState<{ key: string; items: CoveredLoad[]; error: string | null } | null>(null);
+  useEffect(() => {
+    const ac = new AbortController();
+    fetch("/api/queue?status=COVERED", { signal: ac.signal })
+      .then(async (r) => {
+        const j = (await r.json().catch(() => null)) as { ok?: boolean; items?: CoveredLoad[] } | null;
+        if (!r.ok || !j?.ok) throw new Error(`HTTP ${r.status}`);
+        setRes({ key: refreshKey, items: j.items ?? [], error: null });
+      })
+      .catch((e) => { if (!ac.signal.aborted) setRes({ key: refreshKey, items: [], error: e instanceof Error ? e.message : String(e) }); });
+    return () => ac.abort();
+  }, [refreshKey]);
+  const cur = res?.key === refreshKey ? res : null;
+  if (!cur) return <li className="px-1 text-sm text-stone-500">Loading covered loads…</li>;
+  if (cur.error) return <li className="rounded-lg border border-rose-300 bg-rose-50 p-3 text-xs text-rose-800">Covered loads unavailable: {cur.error}.</li>;
+  if (!cur.items.length) return <li className="px-1 text-sm text-stone-500">No covered loads yet. Run the agent on a booked load.</li>;
+  return (
+    <>
+      {cur.items.map((l) => (
+        <li key={l.shipmentId} className="rounded-xl border border-stone-200 bg-white p-3">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-xs text-stone-500">#{l.shipmentId}</span>
+            <span className="rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-emerald-700">COVERED</span>
+          </div>
+          <div className="mt-1 text-sm font-medium">{l.lane}</div>
+          <div className="mt-1 flex justify-between text-xs text-stone-500">
+            <span>{l.customerId} · pickup {shortDate(l.pickupDate)}</span>
+            <span className="font-mono">{l.sell == null ? "—" : usd(l.sell)}</span>
+          </div>
+          <div className="mt-2 flex items-center justify-between border-t border-stone-100 pt-2 text-xs">
+            <span className="font-mono font-semibold text-stone-800">{l.carrierId ?? "carrier n/a"}</span>
+            <span className="text-stone-600">{l.gpPct == null ? "" : `keeps ${l.gpPct}%`}</span>
+          </div>
+          {TMS_UI && <a href={`${TMS_UI}/shipments/${encodeURIComponent(l.shipmentId)}`} target="_blank" rel="noreferrer" className="mt-2 inline-block text-xs font-medium text-indigo-700 underline-offset-2 hover:underline">Open in the TMS ↗</a>}
+        </li>
+      ))}
+    </>
+  );
+}
+
 export default function Queue({ items, heroId, status, outcome, loading, error, onSelect }: {
   items: QueueLoad[]; heroId: string | null; status: RunStatus; outcome: Outcome; loading: boolean; error: string | null;
   onSelect?: (shipmentId: string) => void; // undefined while a run is in progress or in demo mode
 }) {
+  const [tab, setTab] = useState<"booked" | "covered">("booked");
   return (
     <aside className="flex min-h-0 flex-col border-r border-stone-200">
-      <div className="flex items-baseline justify-between px-4 py-3">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-stone-500">Booked loads</h2>
-        <span className="font-mono text-xs text-stone-500">{items.length}</span>
+      <div className="flex items-center justify-between gap-2 px-3 py-3">
+        <div role="tablist" aria-label="Loads" className="flex rounded-lg border border-stone-200 bg-white p-0.5 text-xs">
+          {(["booked", "covered"] as const).map((t) => (
+            <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}
+              className={`rounded-md px-3 py-1.5 font-medium capitalize transition ${tab === t ? "bg-stone-900 text-white" : "text-stone-500 hover:text-stone-800"}`}>{t}</button>
+          ))}
+        </div>
+        {tab === "booked" && <span className="font-mono text-xs text-stone-500">{items.length}</span>}
       </div>
+      {tab === "covered" ? (
+        <ul data-lenis-prevent className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-3"><Covered refreshKey={`${status}:${outcome ?? ""}`} /></ul>
+      ) : (
       <ul data-lenis-prevent className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-3">
         {loading && <li className="px-1 text-sm text-stone-500">Loading booked loads…</li>}
         {error && <li className="rounded-lg border border-rose-300 bg-rose-50 p-3 text-xs text-rose-800">Queue unavailable: {error}. Check .env.local, or switch to Demo.</li>}
@@ -49,6 +107,7 @@ export default function Queue({ items, heroId, status, outcome, loading, error, 
           );
         })}
       </ul>
+      )}
     </aside>
   );
 }
