@@ -76,9 +76,9 @@ export default function Page() {
         <div className="grid min-h-0 grid-cols-[260px_minmax(0,1fr)_440px]">
           <Queue items={queue.items} heroId={heroId} status={status} outcome={outcome} loading={queue.loading} error={queue.error} onSelect={mode === "live" && !busy ? onSelect : undefined} />
           <Economics brief={brief} offer={offer} events={events} preview={preview} />
-          <Feed events={events} error={error} />
+          <Feed events={events} error={error} busy={status === "running"} />
         </div>
-        {status === "awaiting" && approval && <ApprovalPanel approval={approval} onApprove={run.approve} onReject={run.reject} />}
+        {status === "awaiting" && approval && <ApprovalPanel approval={approval} onApprove={run.approve} onReject={run.reject} onSearch={mode === "live" ? live.searchMore : undefined} />}
       </div>
     </Providers>
   );

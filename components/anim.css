@@ -1,3 +1,19 @@
 @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
 @keyframes shake { 0%,100% { transform: none; } 20% { transform: translateX(-6px); } 40% { transform: translateX(6px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+
+/* "Negotiating with…" status line: a soft highlight sweeping across the text while the agent works. */
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.shimmer-text {
+  background: linear-gradient(90deg, #64748b 0%, #64748b 35%, #f1f5f9 50%, #64748b 65%, #64748b 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 2.2s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { .shimmer-text { animation: none; color: #cbd5e1; background: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  [class*="animate-[fadein"], [class*="animate-[rise"], [class*="animate-[shake"] { animation: none !important; }
+}

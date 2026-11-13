@@ -705,7 +705,7 @@
  "post": [
   {
    "type": "thought",
-   "text": "\u2705 Human APPROVED a linehaul of up to $2276.00 for GULFSTRMX (resulting GP 12.49%). GULFSTRMX has not accepted yet: negotiate at exactly $2276.00, then cover and finish the post-cover steps. Then escalate_to_sales."
+   "text": "\u2705 You approved GULFSTRMX at $2276.00."
   },
   {
    "type": "tool_call",
@@ -900,7 +900,7 @@
  "reject": [
   {
    "type": "thought",
-   "text": "\u26d4 Human REJECTED going above the $2084.28 ceiling. Do not cover. Write a note explaining why the load is still open, and escalate_to_sales with the repricing case."
+   "text": "\u26d4 You declined to go over the $2084.28 ceiling. The load stays open."
   },
   {
    "type": "tool_call",

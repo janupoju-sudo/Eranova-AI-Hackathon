@@ -55,7 +55,7 @@ export default function Header({ status, protectedUsd, mode, onMode, onStart, on
         )}
         <span className={`rounded-full px-3 py-1 text-xs font-medium ${s.cls}`}>{s.text}</span>
         {status === "idle" ? (
-          <button onClick={onStart} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300">Run coverage agent</button>
+          <button onClick={onStart} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition active:scale-[0.97] motion-reduce:active:scale-100 hover:bg-emerald-300">Run coverage agent</button>
         ) : (
           <button onClick={onReset} className="rounded-lg border border-white/15 px-4 py-2 text-sm text-slate-300 transition hover:bg-white/5">Reset demo</button>
         )}

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import hero from "./loadBrief.hero.json";
 import type { AgentEvent, LoadBrief } from "../lib/types";
-import { createTools, decisionNote, newRunState, type CarrierReply, type ToolDeps } from "../lib/tools";
+import { createTools, decisionNote, newRunState, uncontactedCarriers, type CarrierReply, type ToolDeps } from "../lib/tools";
 
 type Out = { ok: true; result: Record<string, unknown> } | { ok: false; error: string; detail: string };
 const brief = hero as LoadBrief;
@@ -94,4 +94,26 @@ test("the note claims an appointment only if the TMS accepted it, and 'declined'
   assert.doesNotMatch(decisionNote(state, state.brief!, "why"), /declined|Appointment requested/);
   state.approvalDecision = { carrierId: "GULFSTRMX", decision: "rejected" };
   assert.match(decisionNote(state, state.brief!, "why"), /approval declined/);
+});
+
+test("looking for another carrier: only uncontacted, clean carriers; taking a carrier's own price is allowed after 3 rounds", async () => {
+  const { state, call } = setup();
+  await call("get_load_brief", { shipment_id: id });
+  const max = state.brief!.margin.maxLinehaul;
+  for (const c of ["LAKESHORE", "PRAIRIEHL", "GULFSTRMX"]) await call("negotiate", { carrier_id: c, offer: max, message: "m" });
+  const fresh = uncontactedCarriers(state);
+  assert.equal(fresh.length, 3);
+  for (const c of fresh) {
+    assert.ok(!["LAKESHORE", "PRAIRIEHL", "GULFSTRMX", "RUSTYRIG", "BADWOLF"].includes(c));
+    assert.equal(state.brief!.carriers.find((x) => x.vendorId === c)!.warnings.length, 0);
+  }
+  // Three rounds used with GULFSTRMX; a fourth haggling offer is refused, but meeting their $2,276 is not.
+  await call("negotiate", { carrier_id: "GULFSTRMX", offer: max, message: "m" });
+  await call("negotiate", { carrier_id: "GULFSTRMX", offer: max, message: "m" });
+  let r = await call("negotiate", { carrier_id: "GULFSTRMX", offer: max, message: "m" });
+  assert.equal(!r.ok && r.error, "max_rounds");
+  state.approvedLinehaul = 2276;
+  state.approvedCarrier = "GULFSTRMX";
+  r = await call("negotiate", { carrier_id: "GULFSTRMX", offer: 2276, message: "m" });
+  assert.equal(r.ok && r.result.accepted, true);
 });

@@ -4,11 +4,11 @@
 // how to explain itself). lib/tools.ts enforces every money and compliance limit in code.
 // A run pauses when the model calls request_approval; /api/approve resumes it.
 
-import { hasToolCall, isStepCount, streamText, type ModelMessage } from "ai";
+import { isStepCount, streamText, type ModelMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
 import type { AgentEvent, Money } from "./types";
 import { dockRiskPriced } from "./intel";
-import { createTools, newRunState, type Autonomy, type RunState, type ToolDeps } from "./tools";
+import { createTools, newRunState, uncontactedCarriers, type Autonomy, type RunState, type ToolDeps } from "./tools";
 
 const MAX_STEPS = 24;
 
@@ -64,7 +64,7 @@ export async function startRun(shipmentId: string, opts: RunOptions): Promise<St
 /** Resume a run paused at request_approval with the human's decision. */
 export async function resumeRun(
   runId: string,
-  decision: "approved" | "rejected",
+  decision: "approved" | "rejected" | "search",
   opts: RunOptions,
   note?: string,
 ): Promise<StoredRun> {
@@ -75,6 +75,7 @@ export async function resumeRun(
   }
   const pending = run.state.approvalPending;
   run.state.approvalPending = null;
+  if (decision === "search") return searchMore(run, pending, opts, note);
   run.state.approvalDecision = { carrierId: pending.carrierId, decision };
   const offer = Number(pending.numbers.offer);
   let text: string;
@@ -93,7 +94,40 @@ export async function resumeRun(
       `Write a note explaining why the load is still open, and escalate_to_sales with the repricing case.`;
   }
   if (note) text += ` Human note: ${note}`;
-  opts.emit({ type: "thought", text: decision === "approved" ? `✅ ${text}` : `⛔ ${text}` });
+  opts.emit({
+    type: "thought",
+    text: decision === "approved"
+      ? `✅ You approved ${pending.carrierId} at $${offer.toFixed(2)}.`
+      : `⛔ You declined to go over the $${run.state.brief?.margin.maxLinehaul.toFixed(2)} ceiling. The load stays open.`,
+  });
+  run.messages.push({ role: "user", content: text });
+  run.status = "running";
+  await loop(run, opts);
+  return run;
+}
+
+/** The human wants more options before deciding: call carriers not yet contacted, then come back with the best. */
+async function searchMore(run: StoredRun, pending: NonNullable<RunState["approvalPending"]>, opts: RunOptions, note?: string) {
+  const { state } = run;
+  const max = state.brief?.margin.maxLinehaul.toFixed(2);
+  const fresh = uncontactedCarriers(state);
+  const quoted = Object.keys(state.negotiations).filter((id) => !state.failedCarriers[id]);
+  let text: string;
+  if (fresh.length) {
+    text =
+      `Human did NOT decide yet on ${pending.carrierId}: they asked you to look for another carrier that fits the $${max} ceiling. ` +
+      `Negotiate with these carriers you have not contacted: ${fresh.join(", ")}. For each: open below the ceiling, then offer exactly $${max} up to two more times to get their final price (repeating that offer is fine here). ` +
+      `Then give each already-quoted carrier (${quoted.join(", ")}) one final ask at exactly $${max} if it has a round left. ` +
+      `If any carrier accepts at or below the ceiling, cover the accepted carrier with the lowest riskAdjustedBuy and finish the post-cover steps. ` +
+      `Otherwise call request_approval for the carrier with the lowest riskAdjustedBuy across ALL carriers quoted so far, at its latest price, and stop.`;
+    opts.emit({ type: "thought", text: `🔎 You asked for another carrier. Calling ${fresh.join(", ")}.` });
+  } else {
+    text =
+      `Human asked you to look for another carrier, but every eligible carrier has already been contacted. ` +
+      `Call request_approval again for the carrier with the lowest riskAdjustedBuy at its latest price, and say in the reason that no carriers are left to call.`;
+    opts.emit({ type: "thought", text: `🔎 You asked for another carrier, but every eligible carrier has already been called.` });
+  }
+  if (note) text += ` Human note: ${note}`;
   run.messages.push({ role: "user", content: text });
   run.status = "running";
   await loop(run, opts);
@@ -124,7 +158,8 @@ async function loop(run: StoredRun, opts: RunOptions) {
       temperature: 0.2,
       // One call per step so the model sees a cover 409 before firing cost lines / rate con.
       providerOptions: { openai: { parallelToolCalls: false } },
-      stopWhen: [isStepCount(MAX_STEPS), hasToolCall("request_approval")],
+      // Pause only when an approval is actually pending: a request the guardrails refused must not end the run.
+      stopWhen: [isStepCount(MAX_STEPS), () => state.approvalPending != null],
       onChunk: ({ chunk }) => {
         if (chunk.type === "text-delta") pending += chunk.text;
       },

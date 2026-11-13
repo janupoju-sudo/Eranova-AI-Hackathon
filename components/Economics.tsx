@@ -81,10 +81,8 @@ export default function Economics({ brief, offer, events, preview }: { brief: Lo
       <section data-lenis-prevent className="min-h-0 overflow-y-auto px-8 py-6">
         <h2 className="text-2xl font-semibold tracking-tight">{p.lane.origin} to {p.lane.destination}</h2>
         <p className="mt-1 text-sm text-slate-400">Load {p.shipmentId} for {p.customerId}, {p.lane.miles} miles, delivering to {p.facility.id}</p>
-        <p className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
-          Carriers on file for this load, straight from the TMS. Press “Run coverage agent” and the economics appear here as the agent reads the load brief.
-        </p>
-        <div className="mt-6"><Carriers brief={p} events={[]} detailed /></div>
+        <p className="mt-3 text-sm text-slate-500">Straight from the TMS. Run the agent to see this load’s economics.</p>
+        <div className="mt-8"><Carriers brief={p} events={[]} detailed /></div>
       </section>
     );
   }

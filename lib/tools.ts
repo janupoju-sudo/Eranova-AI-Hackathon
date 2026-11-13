@@ -210,7 +210,9 @@ export function createTools(ctx: ToolContext) {
         }
         const history = (state.negotiations[carrier_id] ??= []);
         const brokerRounds = history.filter((t) => t.from === "broker").length;
-        if (brokerRounds >= MAX_ROUNDS_PER_CARRIER) {
+        const lastCounter = [...history].reverse().find((t) => t.from === "carrier")?.amount;
+        const takingTheirPrice = lastCounter != null && offer >= lastCounter;
+        if (brokerRounds >= MAX_ROUNDS_PER_CARRIER && !takingTheirPrice) {
           return fail("max_rounds", `Already ${MAX_ROUNDS_PER_CARRIER} rounds with ${carrier_id}. Their last counter stands; move on or request approval.`);
         }
 
@@ -464,6 +466,14 @@ export type CoverageTools = ReturnType<typeof createTools>;
 // ---------- Notes: facts come from code, the model only adds one sentence ----------
 
 const usd = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/** Eligible carriers the agent has not contacted yet, best score first (the brief is already sorted by score). */
+export function uncontactedCarriers(state: RunState, limit = 3): string[] {
+  return (state.brief?.carriers ?? [])
+    .filter((c) => c.eligible && !c.warnings.length && !state.negotiations[c.vendorId] && !state.failedCarriers[c.vendorId])
+    .slice(0, limit)
+    .map((c) => c.vendorId);
+}
 
 /** Each non-failed carrier's latest price (accepted amount or last counter). */
 export function latestQuotes(state: RunState): { carrierId: string; amount: Money }[] {

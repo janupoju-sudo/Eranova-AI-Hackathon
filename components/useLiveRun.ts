@@ -66,11 +66,11 @@ export function useLiveRun() {
     void stream("/api/run", { shipmentId, autonomy });
   }, [stream]);
 
-  const decide = useCallback((approved: boolean) => {
+  const decide = useCallback((decision: "approved" | "rejected" | "search") => {
     const runId = runIdRef.current;
     if (!runId) return;
     setStatus("running");
-    void stream("/api/approve", { runId, decision: approved ? "approved" : "rejected" });
+    void stream("/api/approve", { runId, decision });
   }, [stream]);
 
   const reset = useCallback(() => {
@@ -83,5 +83,5 @@ export function useLiveRun() {
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  return { events, status, error, start, reset, approve: () => decide(true), reject: () => decide(false) };
+  return { events, status, error, start, reset, approve: () => decide("approved"), reject: () => decide("rejected"), searchMore: () => decide("search") };
 }
