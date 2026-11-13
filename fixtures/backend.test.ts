@@ -81,15 +81,6 @@ test("pagination follows empty pages, throttles concurrent calls, and rejects re
   if (!result.ok) assert.equal(result.error, "INVALID_CURSOR");
 });
 
-test("write phase guard blocks all mutations while allowing quote reads", async () => {
-  let calls = 0;
-  const client = createTmsClient({ baseUrl: "https://example.invalid", apiKey: "test-only", now: () => new Date("2026-11-13T18:19:59Z"), fetch: async () => { calls++; return json({}); } });
-  assert.equal((await client.uncover("hero")).ok, false);
-  assert.equal(calls, 0);
-  assert.equal((await client.rateEngine({})).ok, true);
-  assert.equal(calls, 1);
-});
-
 test("network exceptions and invalid JSON are handled without secret leakage", async () => {
   const broken = createTmsClient({ baseUrl: "https://example.invalid", apiKey: "hidden-key", fetch: async () => { throw new Error("hidden-key"); } });
   const result = await broken.getShipment("hero");

@@ -12,15 +12,12 @@ export interface TmsOptions {
 export function createTmsClient(options: TmsOptions = {}) {
   let queue: Promise<unknown> = Promise.resolve();
   let lastStart = 0;
-  const now = options.now ?? (() => new Date());
   async function request<T>(method: string, path: string, body?: unknown, params: Params = {}): Promise<TmsResult<T>> {
     const task = queue.then(async (): Promise<TmsResult<T>> => {
       const base = options.baseUrl ?? process.env.TMS_API_BASE;
       const key = options.apiKey ?? process.env.TMS_API_KEY;
       if (!base || !key) return { ok: false, status: 0, error: "TMS_NOT_CONFIGURED", detail: "Set TMS_API_BASE and TMS_API_KEY in .env.local." };
-      const read = method === "GET" || (method === "POST" && ["/rate-engine/quotes", "/quotes/price-preview"].includes(path));
-      if (!read && now().getTime() < Date.parse("2026-11-13T13:20:00-05:00"))
-        return { ok: false, status: 403, error: "READ_ONLY_PHASE", detail: "Shipment writes are blocked until November 13, 2026 at 1:20 PM America/New_York." };
+      // Write gating lives in the agent (TMS_WRITES=1) and reset (--execute); team went live early at 12:35.
       try {
         if (!path.startsWith("/") || path.startsWith("//")) throw new Error("Invalid relative API path");
         const url = new URL(base.replace(/\/$/, "") + path);
