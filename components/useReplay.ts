@@ -26,7 +26,9 @@ export function useReplay() {
     return () => clearTimeout(t);
   }, [status, pending]);
 
-  const start = useCallback(() => {
+  // Demo always replays the hero load, so the optional shipment id is ignored.
+  const start = useCallback((_shipmentId?: string) => {
+    void _shipmentId;
     setEvents([]);
     setPending([...preApproval]);
     setStatus("running");

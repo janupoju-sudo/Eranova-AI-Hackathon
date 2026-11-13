@@ -15,13 +15,14 @@ function chip(isHero: boolean, status: RunStatus, outcome: Outcome) {
   return { t: "BOOKED", c: "bg-white/5 text-slate-400" };
 }
 
-export default function Queue({ items, heroId, status, outcome, loading, error }: {
+export default function Queue({ items, heroId, status, outcome, loading, error, locked, onSelect }: {
   items: QueueLoad[]; heroId: string | null; status: RunStatus; outcome: Outcome; loading: boolean; error: string | null;
+  locked: boolean; onSelect: (id: string) => void;
 }) {
   return (
     <aside className="flex min-h-0 flex-col border-r border-white/10">
       <div className="flex items-baseline justify-between px-4 py-3">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400">Booked loads</h2>
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400">Booked loads <span className="ml-1 font-normal normal-case tracking-normal text-slate-600">{locked ? "" : "· click to choose"}</span></h2>
         <span className="font-mono text-xs text-slate-500">{items.length}</span>
       </div>
       <ul data-lenis-prevent className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 pb-3">
@@ -31,7 +32,14 @@ export default function Queue({ items, heroId, status, outcome, loading, error }
           const hero = l.shipmentId === heroId;
           const ch = chip(hero, status, outcome);
           return (
-            <li key={l.shipmentId} className={`rounded-xl border p-3 transition ${hero ? "border-emerald-400/40 bg-emerald-400/5" : "border-white/10 bg-white/[0.02]"}`}>
+            <li key={l.shipmentId}>
+              <button
+                type="button"
+                disabled={locked}
+                onClick={() => onSelect(l.shipmentId)}
+                aria-pressed={hero}
+                className={`w-full rounded-xl border p-3 text-left transition ${hero ? "border-emerald-400/60 bg-emerald-400/10" : "border-white/10 bg-white/[0.02]"} ${locked ? "cursor-default" : "cursor-pointer hover:border-white/30 hover:bg-white/[0.05]"}`}
+              >
               <div className="flex items-center justify-between">
                 <span className="font-mono text-xs text-slate-400">#{l.shipmentId}</span>
                 <span className={`rounded px-2 py-0.5 text-[10px] font-semibold tracking-wide ${ch.c}`}>{ch.t}</span>
@@ -41,6 +49,7 @@ export default function Queue({ items, heroId, status, outcome, loading, error }
                 <span>{l.customerId} · pickup {shortDate(l.pickupDate)}</span>
                 <span className="font-mono">{l.sell == null ? "—" : usd(l.sell)}</span>
               </div>
+              </button>
             </li>
           );
         })}
