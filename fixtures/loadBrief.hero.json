@@ -65,7 +65,10 @@
     "expectedDwellH": 3.1,
     "expectedDetentionH": 1.1,
     "expectedDetention$": 82.5,
-    "expectedLumper$": 241.25
+    "expectedLumper$": 241.25,
+    "chargebackPct": 3,
+    "poValue$": 50000,
+    "poValueAssumed": true
   },
   "laneHistory": {
     "loads": 8,
@@ -102,7 +105,8 @@
       "loads": 188,
       "score": 69.16,
       "warnings": [],
-      "eligible": true
+      "eligible": true,
+      "expectedChargeback$": 105
     },
     {
       "vendorId": "PRAIRIEHL",
@@ -119,7 +123,8 @@
       "loads": 203,
       "score": 68.76,
       "warnings": [],
-      "eligible": true
+      "eligible": true,
+      "expectedChargeback$": 120
     },
     {
       "vendorId": "GULFSTRMX",
@@ -137,7 +142,8 @@
       "loads": 176,
       "score": 68.32,
       "warnings": [],
-      "eligible": true
+      "eligible": true,
+      "expectedChargeback$": 105
     },
     {
       "vendorId": "CANYONFRT",
@@ -155,7 +161,8 @@
       "loads": 121,
       "score": 66.42,
       "warnings": [],
-      "eligible": true
+      "eligible": true,
+      "expectedChargeback$": 135
     },
     {
       "vendorId": "ACMECARR",
@@ -174,7 +181,8 @@
       "loads": 412,
       "score": 66.1,
       "warnings": [],
-      "eligible": true
+      "eligible": true,
+      "expectedChargeback$": 90
     },
     {
       "vendorId": "SUNRIDGE",
@@ -192,7 +200,8 @@
       "loads": 134,
       "score": 65.98,
       "warnings": [],
-      "eligible": true
+      "eligible": true,
+      "expectedChargeback$": 150
     },
     {
       "vendorId": "BLUERIDGE",
@@ -209,7 +218,8 @@
       "loads": 157,
       "score": 65.74,
       "warnings": [],
-      "eligible": true
+      "eligible": true,
+      "expectedChargeback$": 165
     },
     {
       "vendorId": "HIGHPLAIN",
@@ -229,7 +239,8 @@
       "warnings": [
         "DO NOT USE or incompatible equipment"
       ],
-      "eligible": false
+      "eligible": false,
+      "expectedChargeback$": 180
     },
     {
       "vendorId": "RUSTYRIG",
@@ -249,7 +260,8 @@
       "warnings": [
         "cargo insurance expired 2026-09-29"
       ],
-      "eligible": true
+      "eligible": true,
+      "expectedChargeback$": 240
     },
     {
       "vendorId": "BADWOLF",
@@ -269,7 +281,8 @@
         "carrier status: DO_NOT_USE",
         "DO NOT USE or incompatible equipment"
       ],
-      "eligible": false
+      "eligible": false,
+      "expectedChargeback$": 480
     }
   ],
   "flags": [

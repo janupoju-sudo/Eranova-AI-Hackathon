@@ -66,7 +66,7 @@ function DollarBar({ brief, offer }: { brief: LoadBrief; offer: number | null })
         ))}
       </div>
       <p className="mt-3 text-xs text-slate-500">
-        Sell {usd(sell)}. Expected detention {usd(brief.risk.expectedDetention$)} ({brief.risk.expectedDwellH.toFixed(1)} h dwell) is a risk on top, not priced into the sell.
+        Sell {usd(sell)}. Expected detention {usd(brief.risk.expectedDetention$)} ({brief.risk.expectedDwellH.toFixed(1)} h dwell) is a risk on top, not priced into the sell.{brief.risk?.chargebackPct != null && ` OTIF chargeback: ${brief.risk.chargebackPct}% of ${brief.risk.poValueAssumed ? "assumed " : ""}PO value ${usd(brief.risk.poValue$)} if the carrier misses the window.`}
       </p>
     </div>
   );

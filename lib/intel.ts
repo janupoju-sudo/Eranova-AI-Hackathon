@@ -8,7 +8,7 @@ export interface Shipment {
   origin: { city: string; state: string }; destination: { city: string; state: string };
   miles: number; weight_lb: number; delivery_facility_id: string;
   pickup_window: LoadBrief["pickupWindow"]; delivery_window: LoadBrief["deliveryWindow"];
-  mabd_date: string | null; sell: LoadBrief["sell"];
+  mabd_date: string | null; sell: LoadBrief["sell"]; declared_value?: number | null;
   costs: { id: string; charge_code: string; amount: number; status: string; description?: string }[];
   gp_pct: number | null;
 }
@@ -48,7 +48,7 @@ const toShipment = (s: Raw): Shipment => {
     pickup_window: window(pick?.scheduled_window), delivery_window: window(drop?.scheduled_window), mabd_date: drop?.mabd_date ?? null,
     sell: { total: s.sell_total, lines: charges.map(c => ({ code: c.charge_code, amount: c.amount })) },
     costs: (s.vendor_costs ?? []).map((c: Raw) => ({ id: c.cost_id, charge_code: c.charge_code, amount: c.amount, status: c.status, description: c.description })),
-    gp_pct: s.gp_pct ?? null,
+    gp_pct: s.gp_pct ?? null, declared_value: s.declared_value ?? null,
   };
 };
 const toHours = (h: Raw | undefined) => {
@@ -94,11 +94,25 @@ export const liveSource: IntelSource = {
 
 /** Company-wide margin floor; a customer floor can only raise it (team decision 2026-11-13, PRD §5). */
 export const COMPANY_FLOOR_PCT = 18;
+/** Used for OTIF chargeback risk when the load has no declared_value (22 pallets of dry retail goods). Shown as "assumed". */
+export const ASSUMED_PO_VALUE = 50000;
 const money = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
 const average = (values: number[]) => values.length ? money(values.reduce((sum, value) => sum + value, 0) / values.length) : null;
 const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
 
-export function scoreCarrier(vendor: Vendor, equipment: string, deliveryDate: string): CarrierCandidate {
+/** "chargeback 3% of PO value" → 3. Null when the facility has no percentage OTIF program. */
+export function parseChargebackPct(note: string | null): number | null {
+  const m = note?.match(/(\d+(?:\.\d+)?)\s*%\s*of\s*PO/i);
+  return m ? Number(m[1]) : null;
+}
+
+/** Expected OTIF chargeback for one carrier: probability it misses the window × chargeback amount. */
+export function expectedChargeback(onTimeDeliveryPct: number | null, chargebackPct: number | null, poValue: number): number | null {
+  if (onTimeDeliveryPct == null || chargebackPct == null) return null;
+  return money((1 - onTimeDeliveryPct / 100) * (chargebackPct / 100) * poValue);
+}
+
+export function scoreCarrier(vendor: Vendor, equipment: string, deliveryDate: string): Omit<CarrierCandidate, "expectedChargeback$"> {
   const cargoExpires = vendor.insurance.filter(policy => policy.type === "CARGO").map(policy => policy.expires).sort().at(-1) ?? null;
   const eligible = vendor.status !== "DO_NOT_USE" && vendor.equipment.includes(equipment);
   const warnings: string[] = [];
@@ -132,6 +146,9 @@ export function computeBrief(shipment: Shipment, facility: Facility, floorPct: n
   const expectedDwellH = money((facility.avg_unload_min ?? 0) / 60 + (facility.notes.some(note => /repair|extra dwell/i.test(note)) ? 0.6 : 0));
   const expectedDetentionH = money(Math.max(0, expectedDwellH - 2));
   const carrierFuel$ = money(shipment.sell.lines.filter(line => line.code === "FSC").reduce((sum, line) => sum + line.amount, 0));
+  const chargebackPct = parseChargebackPct(facility.mabd_program_note);
+  const poValueAssumed = !(finite(shipment.declared_value) && shipment.declared_value > 0);
+  const poValue$ = poValueAssumed ? ASSUMED_PO_VALUE : (shipment.declared_value as number);
   const maxBuyTotal = money(shipment.sell.total * (1 - floorPct / 100));
   const maxLinehaul = money(maxBuyTotal - carrierFuel$ - expectedLumper$);
   const flags: string[] = [];
@@ -151,10 +168,10 @@ export function computeBrief(shipment: Shipment, facility: Facility, floorPct: n
     pickupWindow: shipment.pickup_window, deliveryWindow: shipment.delivery_window, mabdDate: shipment.mabd_date,
     sell: shipment.sell,
     facility: { id: facility.id, avgUnloadMin: facility.avg_unload_min, graceMin: facility.grace_min, lumperPolicy: facility.lumper_policy, lumperFeeRange: facility.lumper_fee_range, leadTimeHours: facility.lead_time_hours, mabdProgramNote: facility.mabd_program_note, receivingHours: facility.receiving_hours, complianceFlags: facility.compliance_flags, notes: facility.notes },
-    risk: { expectedDwellH, expectedDetentionH, expectedDetention$: money(expectedDetentionH * 75), expectedLumper$ },
+    risk: { expectedDwellH, expectedDetentionH, expectedDetention$: money(expectedDetentionH * 75), expectedLumper$, chargebackPct, poValue$, poValueAssumed },
     laneHistory: { loads: lane.length, avgLinehaulPerMile, avgLumper$, avgGpPct: average(lane.map(item => item.gp_pct).filter(finite)) },
     market, margin: { floorPct, maxBuyTotal, carrierFuel$, maxLinehaul, floorReachableAtHistory },
-    carriers: vendors.map(vendor => scoreCarrier(vendor, shipment.equipment, shipment.delivery_window.end.slice(0, 10))).sort((a, b) => b.score - a.score || a.vendorId.localeCompare(b.vendorId)), flags,
+    carriers: vendors.map(vendor => ({ ...scoreCarrier(vendor, shipment.equipment, shipment.delivery_window.end.slice(0, 10)), expectedChargeback$: expectedChargeback(vendor.on_time_delivery_pct, chargebackPct, poValue$) })).sort((a, b) => b.score - a.score || a.vendorId.localeCompare(b.vendorId)), flags,
   };
 }
 
@@ -197,13 +214,17 @@ export async function loadBrief(shipmentId: string, options: { fixture?: boolean
 }
 
 /**
- * Header counter ("margin protected"): dock costs priced into the buy that a truck-only rep would have missed
- * (expected lumper + expected detention), plus overpay avoided vs the lane's historical linehaul.
+ * Header counter ("dock risk priced"): costs a truck-only rep never sees at booking time and nobody bills for —
+ * expected detention plus this carrier's expected OTIF chargeback. (Lumper is excluded: it is billed on the sell.)
  */
-export function marginProtected(brief: LoadBrief, linehaul: number): number {
-  const dock = brief.risk.expectedLumper$ + brief.risk.expectedDetention$;
-  const hist = brief.laneHistory.avgLinehaulPerMile != null ? brief.laneHistory.avgLinehaulPerMile * brief.lane.miles : null;
-  return money(dock + (hist != null ? Math.max(0, hist - linehaul) : 0));
+export function dockRiskPriced(brief: LoadBrief, carrierId: string | null): number {
+  const cb = brief.carriers.find(c => c.vendorId === carrierId)?.expectedChargeback$ ?? 0;
+  return money(brief.risk.expectedDetention$ + cb);
+}
+
+/** Linehaul + expected OTIF chargeback: the number carriers are compared on. */
+export function riskAdjustedBuy(brief: LoadBrief, carrierId: string, linehaul: number): number {
+  return money(linehaul + (brief.carriers.find(c => c.vendorId === carrierId)?.expectedChargeback$ ?? 0));
 }
 
 /** All proposed-price arithmetic belongs here, including the human approval panel. */

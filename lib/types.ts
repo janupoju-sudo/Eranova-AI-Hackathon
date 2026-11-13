@@ -14,6 +14,7 @@ export interface CarrierCandidate {
   score: number;                     // computed by intel
   warnings: string[];                // e.g. "cargo insurance expired 2026-09-29"
   eligible: boolean;                 // false for DO_NOT_USE / wrong equipment
+  expectedChargeback$: Money | null; // (1 − on-time %) × OTIF chargeback % × PO value; null if unknown
 }
 
 export interface LoadBrief {
@@ -43,6 +44,9 @@ export interface LoadBrief {
     expectedDetentionH: number;
     expectedDetention$: Money;
     expectedLumper$: Money;
+    chargebackPct: number | null;    // OTIF chargeback % of PO value, parsed from the facility MABD note
+    poValue$: Money;                 // declared value, else an assumed PO value (poValueAssumed)
+    poValueAssumed: boolean;
   };
   laneHistory: { loads: number; avgLinehaulPerMile: number | null; avgLumper$: Money | null; avgGpPct: number | null };
   market: { low: Money; target: Money; high: Money; rateId: string } | null;
@@ -63,4 +67,4 @@ export type AgentEvent =
   | { type: "tool_result"; name: string; ok: boolean; result: unknown }
   | { type: "negotiation"; carrierId: string; from: "broker" | "carrier"; text: string; amount?: Money }
   | { type: "approval_needed"; runId: string; reason: string; numbers: Record<string, Money | number> }
-  | { type: "done"; summary: string; protected$?: Money };
+  | { type: "done"; summary: string; protected$?: Money /** dock risk priced before booking: expected detention + expected OTIF chargeback */ };

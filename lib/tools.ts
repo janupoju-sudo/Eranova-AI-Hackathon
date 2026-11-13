@@ -11,7 +11,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import type { AgentEvent, LoadBrief, Money } from "./types";
 import type { TmsResult } from "./tms";
-import { priceImpact } from "./intel";
+import { priceImpact, riskAdjustedBuy } from "./intel";
 
 // ---------- Dependency contract (implemented by lib/tms.ts, lib/intel.ts, lib/carrierSim.ts) ----------
 
@@ -63,6 +63,8 @@ export interface RunState {
   /** Linehaul ceiling raised by a human approval (null = use brief.margin.maxLinehaul). */
   approvedLinehaul: Money | null;
   approvalPending: { carrierId: string; reason: string; numbers: Record<string, Money | number> } | null;
+  /** Last human decision on an approval request (null = never asked). */
+  approvalDecision: { carrierId: string; decision: "approved" | "rejected" } | null;
   negotiations: Record<string, NegotiationTurn[]>;
   deals: Record<string, Deal>;
   coveredBy: Deal | null;
@@ -80,6 +82,7 @@ export function newRunState(runId: string, shipmentId: string, autonomy: Autonom
     brief: null,
     approvedLinehaul: null,
     approvalPending: null,
+    approvalDecision: null,
     negotiations: {},
     deals: {},
     coveredBy: null,
@@ -233,6 +236,8 @@ export function createTools(ctx: ToolContext) {
             roundsUsed: brokerRounds + 1,
             ceiling: cap,
             counterAboveCeiling: reply.counter != null ? reply.counter > cap : undefined,
+            expectedChargeback: cand.expectedChargeback$,
+            riskAdjustedBuy: riskAdjustedBuy(brief, carrier_id, reply.accept ? offer : reply.counter ?? offer),
           },
         };
       }),
@@ -259,6 +264,9 @@ export function createTools(ctx: ToolContext) {
         }
         const cap = ceiling(state);
         if (amount > cap) return fail("over_ceiling", `$${amount.toFixed(2)} exceeds ceiling $${cap.toFixed(2)}. Request approval first.`);
+        if (amount > brief.margin.maxLinehaul && state.approvedCarrier !== carrier_id) {
+          return fail("approval_required", `The human approved going over the ceiling for ${state.approvedCarrier ?? "no carrier"}, not ${carrier_id}. Cover ${state.approvedCarrier ?? "an approved carrier"} or request approval.`);
+        }
         if (state.autonomy === "supervised" && (state.approvedCarrier !== carrier_id || amount > (state.approvedLinehaul ?? 0))) {
           return fail("approval_required", `Supervised mode: a human approves every cover. Call request_approval for ${carrier_id} at $${amount.toFixed(2)} first.`);
         }
@@ -354,9 +362,13 @@ export function createTools(ctx: ToolContext) {
         if (l > norm(dw.end)) return fail("too_late", `Window ends after the delivery window ${dw.end}.`);
         if (brief.mabdDate && l.slice(0, 10) > brief.mabdDate) return fail("after_mabd", `Window ends after MABD ${brief.mabdDate}.`);
         const body = { status: "REQUESTED", scheduled_window: { earliest_local: e, latest_local: l, timezone: dw.tz } };
-        state.appointment = { start: e, end: l, tz: dw.tz };
-        if (!ctx.writesEnabled) return dryRun("request_appointment", { stop_seq: a.stop_seq, ...body });
-        return fromTms(await deps.tms.setAppointment(a.shipment_id, a.stop_seq, body), shipmentSummary);
+        if (!ctx.writesEnabled) {
+          state.appointment = { start: e, end: l, tz: dw.tz };
+          return dryRun("request_appointment", { stop_seq: a.stop_seq, ...body });
+        }
+        const r = await deps.tms.setAppointment(a.shipment_id, a.stop_seq, body);
+        if (r.ok) state.appointment = { start: e, end: l, tz: dw.tz }; // the note only claims what the TMS accepted
+        return fromTms(r, shipmentSummary);
       }),
     }),
 
@@ -385,6 +397,25 @@ export function createTools(ctx: ToolContext) {
         const brief = requireBrief();
         if (!brief) return NO_BRIEF;
         offer = round2(offer);
+        const cand = brief.carriers.find((c) => c.vendorId === carrier_id);
+        if (!cand || !cand.eligible) return fail("ineligible_carrier", `${carrier_id} is not an eligible carrier in the brief.`);
+        if (state.failedCarriers[carrier_id]) return fail("carrier_blocked", `${carrier_id} already failed: ${state.failedCarriers[carrier_id]}`);
+        const quoted = latestQuotes(state);
+        const q = quoted.find((x) => x.carrierId === carrier_id);
+        if (!q) return fail("no_quote", `${carrier_id} has not quoted. Negotiate first; approvals are only for real carrier prices.`);
+        if (Math.abs(q.amount - offer) > 0.01) {
+          return fail("not_their_price", `${carrier_id}'s latest price is $${q.amount.toFixed(2)}, not $${offer.toFixed(2)}. Request approval at the carrier's actual price.`);
+        }
+        // Code picks the candidate: lowest linehaul + expected OTIF chargeback. The model explains, it doesn't choose.
+        const ranked = quoted.map((x) => ({ ...x, risk: riskAdjustedBuy(brief, x.carrierId, x.amount) })).sort((a, b) => a.risk - b.risk);
+        const mine = ranked.find((x) => x.carrierId === carrier_id)!;
+        if (mine.risk > ranked[0].risk + 0.01) {
+          const best = ranked[0];
+          return fail(
+            "not_best_risk_adjusted",
+            `${carrier_id} costs $${mine.risk.toFixed(2)} risk-adjusted (linehaul + expected OTIF chargeback); ${best.carrierId} costs $${best.risk.toFixed(2)} at $${best.amount.toFixed(2)}. Request approval for ${best.carrierId} instead.`,
+          );
+        }
         const p = priceImpact(brief, offer);
         const numbers: Record<string, Money | number> = {
           offer,
@@ -396,6 +427,9 @@ export function createTools(ctx: ToolContext) {
           gpWithDetentionPct: p.gpWithDetentionPct,
           floorPct: brief.margin.floorPct,
           recommendedSell: p.recommendedSell,
+          expectedChargeback: cand.expectedChargeback$ ?? 0,
+          riskAdjustedBuy: mine.risk,
+          poValue: brief.risk.poValue$,
         };
         // Warnings come from the brief, not the model, so the human always sees them.
         const warnings = brief.carriers.find((c) => c.vendorId === carrier_id)?.warnings ?? [];
@@ -431,6 +465,17 @@ export type CoverageTools = ReturnType<typeof createTools>;
 
 const usd = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+/** Each non-failed carrier's latest price (accepted amount or last counter). */
+export function latestQuotes(state: RunState): { carrierId: string; amount: Money }[] {
+  const out: { carrierId: string; amount: Money }[] = [];
+  for (const [carrierId, turns] of Object.entries(state.negotiations)) {
+    if (state.failedCarriers[carrierId]) continue;
+    const last = [...turns].reverse().find((t) => t.from === "carrier" && t.amount != null);
+    if (last) out.push({ carrierId, amount: last.amount! });
+  }
+  return out;
+}
+
 /** Lowest price any carrier offered (accepted or countered), used when the load is still open. */
 function bestQuote(state: RunState): { carrierId: string; amount: Money } | null {
   let best: { carrierId: string; amount: Money } | null = null;
@@ -458,11 +503,15 @@ export function decisionNote(state: RunState, brief: LoadBrief, why: string): st
     const over = state.coveredBy.amount - cap;
     lines.push(`[Coverage Agent] Covered by ${state.coveredBy.carrierId} at ${usd(state.coveredBy.amount)} linehaul vs ${usd(cap)} ceiling (${brief.margin.floorPct}% floor)${over > 0.005 ? `, human-approved +${usd(over)}` : ""}.`);
   } else {
-    lines.push(`[Coverage Agent] NOT covered: no carrier within the ${usd(cap)} ceiling${deal ? `; best quote ${deal.carrierId} ${usd(deal.amount)}` : ""}${state.approvedLinehaul == null && deal ? " (over-ceiling approval declined)" : ""}.`);
+    lines.push(`[Coverage Agent] NOT covered: no carrier within the ${usd(cap)} ceiling${deal ? `; best quote ${deal.carrierId} ${usd(deal.amount)}` : ""}${state.approvalDecision?.decision === "rejected" ? " (over-ceiling approval declined)" : ""}.`);
   }
   if (deal) {
     const p = priceImpact(brief, deal.amount);
     lines.push(`Buy ${usd(p.totalBuy)} = linehaul + FSC ${usd(brief.margin.carrierFuel$)} + LUM ${usd(brief.risk.expectedLumper$)} → GP ${p.gpPct}% (${p.gpWithDetentionPct}% incl. expected detention ${usd(brief.risk.expectedDetention$)}, ${brief.risk.expectedDwellH} h dwell).`);
+  }
+  if (deal) {
+    const cb = brief.carriers.find((c) => c.vendorId === deal.carrierId)?.expectedChargeback$;
+    if (cb != null) lines.push(`Expected OTIF chargeback ${usd(cb)} (${brief.risk.chargebackPct}% of ${brief.risk.poValueAssumed ? "assumed " : ""}PO value ${usd(brief.risk.poValue$)} × this carrier's late rate) → risk-adjusted buy ${usd(riskAdjustedBuy(brief, deal.carrierId, deal.amount))} linehaul basis.`);
   }
   const failed = Object.entries(state.failedCarriers);
   if (failed.length) lines.push(`Recovered: ${failed.map(([id, d]) => `${id} rejected by TMS — ${d}`).join("; ")}`);

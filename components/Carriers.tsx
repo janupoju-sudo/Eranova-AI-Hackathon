@@ -36,7 +36,10 @@ function Row({ c, s }: { c: CarrierCandidate; s?: Status }) {
       </div>
       <div className="mt-0.5 flex items-center justify-between gap-2 text-[11px] text-slate-400">
         <span className="font-mono">{c.vendorId}</span>
-        <span>{c.onTimeDeliveryPct ?? "—"}% on-time · {c.claims ?? 0} claims</span>
+        <span>
+          {c.onTimeDeliveryPct ?? "—"}% on-time · {c.claims ?? 0} claims
+          {c.expectedChargeback$ != null && <span className="text-amber-200" title="(1 − on-time %) × OTIF chargeback % × PO value"> · OTIF risk {usd(c.expectedChargeback$)}</span>}
+        </span>
       </div>
       {c.warnings.length > 0 && (
         <div className="mt-1 flex flex-wrap gap-1">
@@ -52,6 +55,9 @@ export default function Carriers({ brief, events }: { brief: LoadBrief; events: 
   return (
     <div>
       <h3 className="mb-2 text-[10px] uppercase tracking-widest text-slate-500">Carriers (ranked by reliability)</h3>
+      {brief.risk.chargebackPct != null && (
+        <p className="mb-2 text-[10px] text-slate-500">OTIF risk = late rate × {brief.risk.chargebackPct}% of {brief.risk.poValueAssumed ? "assumed " : ""}PO value {usd(brief.risk.poValue$)}</p>
+      )}
       <ul className="space-y-1.5">{brief.carriers.map((c) => <Row key={c.vendorId} c={c} s={st[c.vendorId]} />)}</ul>
     </div>
   );

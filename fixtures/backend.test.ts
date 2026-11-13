@@ -4,7 +4,7 @@ import hero from "./loadBrief.prd.json";
 import liveHero from "./loadBrief.hero.json";
 import events from "./events.sample.json";
 import type { AgentEvent, LoadBrief } from "../lib/types";
-import { computeBrief, loadBriefResult, marginProtected, priceImpact, scoreCarrier, toFacility, type Facility, type Shipment, type Vendor, type IntelSource } from "../lib/intel";
+import { computeBrief, loadBriefResult, dockRiskPriced, expectedChargeback, parseChargebackPct, riskAdjustedBuy, priceImpact, scoreCarrier, toFacility, type Facility, type Shipment, type Vendor, type IntelSource } from "../lib/intel";
 import { createTmsClient } from "../lib/tms";
 import { resetShipment } from "../scripts/reset";
 
@@ -29,12 +29,20 @@ const history: Shipment[] = [
 ];
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status });
 
-test("margin protected = dock costs priced in + overpay avoided vs lane history", () => {
+test("dock risk = expected detention + carrier's expected OTIF chargeback (lumper excluded: billed on sell)", () => {
   const b = computeBrief(shipment, facility, 18, history, vendors, null);
-  const dock = b.risk.expectedLumper$ + b.risk.expectedDetention$;
-  const hist = b.laneHistory.avgLinehaulPerMile! * b.lane.miles;
-  assert.equal(marginProtected(b, hist + 500), Math.round(dock * 100) / 100); // paid above history: only dock costs count
-  assert.equal(marginProtected(b, hist - 100), Math.round((dock + 100) * 100) / 100);
+  assert.equal(parseChargebackPct("OTIF program — chargeback 3% of PO value for arrivals after MABD"), 3);
+  assert.equal(parseChargebackPct(null), null);
+  assert.equal(expectedChargeback(93, 3, 50000), 105);
+  assert.equal(expectedChargeback(null, 3, 50000), null);
+  assert.equal(b.risk.poValueAssumed, true);
+  const c = b.carriers.find(x => x.expectedChargeback$ != null)!;
+  assert.equal(dockRiskPriced(b, c.vendorId), Math.round((b.risk.expectedDetention$ + c.expectedChargeback$!) * 100) / 100);
+  assert.equal(dockRiskPriced(b, null), b.risk.expectedDetention$);
+  assert.equal(riskAdjustedBuy(b, c.vendorId, 2000), 2000 + c.expectedChargeback$!);
+  const declared = computeBrief({ ...shipment, declared_value: 80000 }, facility, 18, history, vendors, null);
+  assert.equal(declared.risk.poValue$, 80000);
+  assert.equal(declared.risk.poValueAssumed, false);
 });
 
 test("facility adapter accepts null closed days and orders receiving hours", () => {

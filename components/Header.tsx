@@ -34,7 +34,7 @@ export default function Header({ status, protectedUsd, mode, onMode, onStart, on
       </div>
       <div className="flex items-center gap-6">
         <div className="text-right">
-          <div className="text-[10px] uppercase tracking-widest text-slate-500">Margin protected</div>
+          <div className="text-[10px] uppercase tracking-widest text-slate-500" title="Expected detention + expected OTIF chargeback: dock costs nobody bills for, priced before booking">Dock risk priced before booking</div>
           <div className="font-mono text-2xl font-semibold text-emerald-300"><CountUp value={protectedUsd} digits={0} /></div>
         </div>
         <div className="flex rounded-lg border border-white/10 p-0.5 text-xs">
