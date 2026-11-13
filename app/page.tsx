@@ -71,7 +71,7 @@ export default function Page() {
 
   return (
     <Providers>
-      <div className="grid h-screen grid-rows-[auto_minmax(0,1fr)_auto] bg-[#0b0f14] text-slate-100">
+      <div className="grid h-screen grid-rows-[auto_minmax(0,1fr)_auto] app-bg text-stone-900">
         <Header status={status} protectedUsd={protectedUsd} mode={mode} onMode={onMode} onStart={onStart} autonomy={mode === "live" ? autonomy : undefined} onAutonomy={busy ? undefined : setAutonomy} onReset={onReset} />
         <div className="grid min-h-0 grid-cols-[260px_minmax(0,1fr)_440px]">
           <Queue items={queue.items} heroId={heroId} status={status} outcome={outcome} loading={queue.loading} error={queue.error} onSelect={mode === "live" && !busy ? onSelect : undefined} />

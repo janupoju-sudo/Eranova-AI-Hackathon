@@ -5,7 +5,7 @@ import type { AgentEvent, LoadBrief } from "@/lib/types";
 import { usd } from "./format";
 
 function Json({ value }: { value: unknown }) {
-  return <pre data-lenis-prevent className="max-h-48 overflow-auto rounded-md bg-black/40 p-3 font-mono text-[11px] leading-relaxed text-slate-300">{JSON.stringify(value, null, 2)}</pre>;
+  return <pre data-lenis-prevent className="max-h-48 overflow-auto rounded-md bg-stone-100 p-3 font-mono text-[11px] leading-relaxed text-stone-700">{JSON.stringify(value, null, 2)}</pre>;
 }
 
 /** Strip Markdown markers (**bold**, ### headings) the model sometimes puts in its reasoning. */
@@ -42,16 +42,16 @@ function Step({ call, result, names }: { call: Call; result: Result; names: Reco
   const dry = typeof result.result === "object" && result.result !== null && (result.result as { dryRun?: boolean }).dryRun === true;
   return (
     <div className="animate-[fadein_.35s_ease-out] motion-reduce:animate-none">
-      <button onClick={() => setOpen(!open)} aria-expanded={open} className="group flex w-full items-center gap-2 rounded-md py-0.5 text-left text-sm text-slate-400 transition-colors hover:text-slate-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-300">
-        <span aria-hidden className="text-emerald-400">✓</span>
+      <button onClick={() => setOpen(!open)} aria-expanded={open} className="group flex w-full items-center gap-2 rounded-md py-0.5 text-left text-sm text-stone-500 transition-colors hover:text-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600">
+        <span aria-hidden className="text-emerald-600">✓</span>
         <span>{label}</span>
-        {dry && <span className="rounded bg-sky-400/15 px-1.5 py-0.5 text-[10px] font-semibold text-sky-300">dry run · not sent to TMS</span>}
-        <span className="ml-auto text-xs text-slate-600 group-hover:text-slate-400">{open ? "hide" : "details"}</span>
+        {dry && <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700">dry run · not sent to TMS</span>}
+        <span className="ml-auto text-xs text-stone-400 group-hover:text-stone-500">{open ? "hide" : "details"}</span>
       </button>
       {open && (
         <div className="mt-2 space-y-2">
-          <p className="font-mono text-[11px] text-slate-500">{call.name} · sent</p><Json value={call.args} />
-          <p className="font-mono text-[11px] text-slate-500">{call.name} · returned</p><Json value={result.result} />
+          <p className="font-mono text-[11px] text-stone-500">{call.name} · sent</p><Json value={call.args} />
+          <p className="font-mono text-[11px] text-stone-500">{call.name} · returned</p><Json value={result.result} />
         </div>
       )}
     </div>
@@ -62,7 +62,7 @@ function Step({ call, result, names }: { call: Call; result: Result; names: Reco
 function Working({ text }: { text: string }) {
   return (
     <p role="status" aria-live="polite" className="flex items-center gap-2 pl-0.5 text-sm">
-      <span aria-hidden className="size-1.5 animate-pulse rounded-full bg-emerald-400 motion-reduce:animate-none" />
+      <span aria-hidden className="size-1.5 animate-pulse rounded-full bg-emerald-500 motion-reduce:animate-none" />
       <span className="shimmer-text">{text}…</span>
     </p>
   );
@@ -98,14 +98,14 @@ function ToolResult({ e, recovered }: { e: Extract<AgentEvent, { type: "tool_res
   const r = (typeof e.result === "object" && e.result ? e.result : {}) as { error?: string; detail?: string };
   const error = r.error ?? "error";
   const fromTms = /^\d/.test(error);
-  const tone = fromTms ? { box: "border-rose-500/50 bg-rose-500/10", head: "text-rose-100", body: "text-rose-100/90", meta: "text-rose-300/80" }
-    : { box: "border-amber-400/40 bg-amber-400/[0.07]", head: "text-amber-100", body: "text-amber-50/90", meta: "text-amber-200/70" };
+  const tone = fromTms ? { box: "border-rose-300 bg-rose-50", head: "text-rose-900", body: "text-rose-900/90", meta: "text-rose-700/80" }
+    : { box: "border-amber-300 bg-amber-50", head: "text-amber-900", body: "text-amber-900/90", meta: "text-amber-800/70" };
   return (
     <div className={`rounded-xl border p-4 ${tone.box}`}>
       <p className={`text-[15px] font-semibold leading-snug ${tone.head}`}>{refusalHeadline(error, r.detail ?? "")}</p>
       {r.detail && <p className={`mt-2 text-sm leading-relaxed ${tone.body}`}>{r.detail}</p>}
       <div className={`mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs ${tone.meta}`}>
-        {recovered && <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 font-medium text-emerald-300">✓ The AI corrected itself</span>}
+        {recovered && <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700">✓ The AI corrected itself</span>}
         <span className="font-mono">rule: {error}</span>
         <button onClick={() => setOpen(!open)} aria-expanded={open} className="ml-auto underline-offset-2 hover:underline">{open ? "hide details" : "details"}</button>
       </div>
@@ -118,10 +118,10 @@ function Bubble({ e, name }: { e: Extract<AgentEvent, { type: "negotiation" }>; 
   const broker = e.from === "broker";
   return (
     <div className={`flex ${broker ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${broker ? "rounded-br-sm bg-emerald-400/15 text-emerald-50" : "rounded-bl-sm bg-white/[0.07] text-slate-100"}`}>
-        <div className="mb-0.5 flex items-center justify-between gap-4 text-[10px] uppercase tracking-widest text-slate-400">
+      <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 ${broker ? "rounded-br-sm bg-emerald-100 text-emerald-900" : "rounded-bl-sm border border-stone-200 bg-white text-stone-900 shadow-sm"}`}>
+        <div className="mb-0.5 flex items-center justify-between gap-4 text-[10px] uppercase tracking-widest text-stone-500">
           <span>{broker ? `Broker agent → ${name ?? e.carrierId}` : name ? `${name} · ${e.carrierId}` : e.carrierId}</span>
-          {e.amount != null && <span className="font-mono text-sm font-semibold normal-case tracking-normal text-white">{usd(e.amount)}</span>}
+          {e.amount != null && <span className="font-mono text-sm font-semibold normal-case tracking-normal text-stone-900">{usd(e.amount)}</span>}
         </div>
         <p className="text-sm leading-snug">{e.text}</p>
       </div>
@@ -146,16 +146,16 @@ function Blocked({ e, events, i, names }: { e: Extract<AgentEvent, { type: "tool
     if (x.type === "negotiation" && x.from === "broker") { next = `Went back to ${name(x.carrierId)} to negotiate.`; break; }
   }
   return (
-    <div className="animate-[shake_.5s_ease-in-out_1] overflow-hidden rounded-xl border-2 border-rose-500/70 bg-rose-500/10 motion-reduce:animate-none">
-      <div className="flex items-center gap-3 bg-rose-500/20 px-4 py-2">
-        <span className="rounded bg-rose-500 px-2 py-0.5 font-mono text-sm font-bold text-white">{status}</span>
-        <span className="font-semibold text-rose-100">The TMS blocked this carrier</span>
+    <div className="animate-[shake_.5s_ease-in-out_1] overflow-hidden rounded-xl border-2 border-rose-400 bg-rose-50 motion-reduce:animate-none">
+      <div className="flex items-center gap-3 bg-rose-100 px-4 py-2">
+        <span className="rounded bg-rose-600 px-2 py-0.5 font-mono text-sm font-bold text-white">{status}</span>
+        <span className="font-semibold text-rose-900">The TMS blocked this carrier</span>
       </div>
       <div className="px-4 py-3">
-        <p className="text-lg font-semibold text-white">{name(carrierId)}</p>
-        <p className="mt-1 text-sm text-rose-100">{r.detail ?? "Cover rejected."}</p>
+        <p className="text-lg font-semibold text-stone-900">{name(carrierId)}</p>
+        <p className="mt-1 text-sm text-rose-900">{r.detail ?? "Cover rejected."}</p>
       </div>
-      <div className={`border-t px-4 py-2.5 text-sm ${next ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200" : "border-rose-500/30 text-rose-200/80"}`}>
+      <div className={`border-t px-4 py-2.5 text-sm ${next ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-rose-300 text-rose-800/80"}`}>
         {next ? <><b>Recovered.</b> {next}</> : "The agent is reading the rejection and choosing another carrier…"}
       </div>
     </div>
@@ -177,15 +177,15 @@ export default function Feed({ events, error, busy }: { events: AgentEvent[]; er
   }
   const working = busy ? (pending ? stepLabel(pending, names).doing : "Thinking") : null;
   return (
-    <main className="flex min-h-0 flex-col border-l border-white/10">
+    <main className="flex min-h-0 flex-col border-l border-stone-200">
       <div className="flex items-baseline justify-between px-5 py-3">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400">Live agent feed</h2>
-        <span className="font-mono text-xs text-slate-500">{events.filter((x) => x.type === "tool_call").length} steps</span>
+        <h2 className="text-xs font-semibold uppercase tracking-widest text-stone-500">Live agent feed</h2>
+        <span className="font-mono text-xs text-stone-500">{events.filter((x) => x.type === "tool_call").length} steps</span>
       </div>
       <div ref={ref} data-lenis-prevent className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 pb-6">
         {events.length === 0 && (
-          <div className="grid h-full place-items-center text-center text-slate-500">
-            <div><p className="text-lg text-slate-300">Ready.</p><p className="mt-1 text-sm">Press “Run coverage agent” to start.</p></div>
+          <div className="grid h-full place-items-center text-center text-stone-500">
+            <div><p className="text-lg text-stone-700">Ready.</p><p className="mt-1 text-sm">Press “Run coverage agent” to start.</p></div>
           </div>
         )}
         {events.map((e, i) => {
@@ -193,17 +193,17 @@ export default function Feed({ events, error, busy }: { events: AgentEvent[]; er
           switch (e.type) {
             case "thought":
               if (e.text.startsWith("🔎")) {
-                return <p key={k} className="animate-[fadein_.35s_ease-out] rounded-lg bg-sky-400/10 px-3 py-2 text-sm font-medium text-sky-100">{e.text.replace(/^🔎\s*/u, "")}</p>;
+                return <p key={k} className="animate-[fadein_.35s_ease-out] rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium text-indigo-900">{e.text.replace(/^🔎\s*/u, "")}</p>;
               }
               if (/^[✅⛔]/u.test(e.text)) {
                 const ok = e.text.startsWith("✅");
                 return (
-                  <p key={k} className={`animate-[fadein_.35s_ease-out] rounded-lg px-3 py-2 text-sm font-medium ${ok ? "bg-emerald-400/10 text-emerald-200" : "bg-rose-500/10 text-rose-200"}`}>
+                  <p key={k} className={`animate-[fadein_.35s_ease-out] rounded-lg px-3 py-2 text-sm font-medium ${ok ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-800"}`}>
                     {e.text.replace(/^[✅⛔]\s*/u, ok ? "✓ " : "✕ ")}
                   </p>
                 );
               }
-              return <p key={k} className="animate-[fadein_.35s_ease-out] border-l-2 border-slate-600 pl-4 text-[15px] leading-relaxed text-slate-300">{plain(e.text)}</p>;
+              return <p key={k} className="animate-[fadein_.35s_ease-out] border-l-2 border-stone-300 pl-4 text-[15px] leading-relaxed text-stone-700">{plain(e.text)}</p>;
             case "tool_call": {
               const r = events.slice(i + 1).find((x) => x.type === "tool_result");
               return r?.type === "tool_result" && r.ok ? <Step key={k} call={e} result={r} names={names} /> : null;
@@ -214,13 +214,13 @@ export default function Feed({ events, error, busy }: { events: AgentEvent[]; er
               return <div key={k} className="animate-[fadein_.35s_ease-out]"><ToolResult e={e} recovered={events.slice(i + 1).some((x) => x.type === "tool_call" || x.type === "negotiation")} /></div>;
             case "negotiation": return <div key={k} className="animate-[fadein_.35s_ease-out]"><Bubble e={e} name={names[e.carrierId]} /></div>;
             case "approval_needed":
-              return <div key={k} className="rounded-xl border border-amber-400/50 bg-amber-400/10 p-4 text-sm text-amber-100"><b>Paused for human approval.</b> {e.reason}</div>;
+              return <div key={k} className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900"><b>Paused for human approval.</b> {e.reason}</div>;
             case "done":
-              return <div key={k} className="rounded-xl border border-emerald-400/50 bg-emerald-400/10 p-4 text-sm text-emerald-100"><b>Done.</b> {e.summary}</div>;
+              return <div key={k} className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-900"><b>Done.</b> {e.summary}</div>;
           }
         })}
         {working && !error && <Working text={working} />}
-        {error && <div className="rounded-xl border border-rose-500/60 bg-rose-500/10 p-4 text-sm text-rose-100"><b>Backend problem.</b> {error} Check that .env.local is filled in and the server is running, or switch to Demo.</div>}
+        {error && <div className="rounded-xl border border-rose-400 bg-rose-50 p-4 text-sm text-rose-900"><b>Backend problem.</b> {error} Check that .env.local is filled in and the server is running, or switch to Demo.</div>}
       </div>
     </main>
   );
