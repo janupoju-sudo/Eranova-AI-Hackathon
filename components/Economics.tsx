@@ -72,13 +72,30 @@ function DollarBar({ brief, offer }: { brief: LoadBrief; offer: number | null })
   );
 }
 
-export default function Economics({ brief, offer, events }: { brief: LoadBrief | null; offer: number | null; events: AgentEvent[] }) {
+type Preview = { brief: LoadBrief | null; loading: boolean; error: string | null };
+
+export default function Economics({ brief, offer, events, preview }: { brief: LoadBrief | null; offer: number | null; events: AgentEvent[]; preview?: Preview }) {
+  if (!brief && preview?.brief) {
+    const p = preview.brief;
+    return (
+      <section data-lenis-prevent className="min-h-0 overflow-y-auto px-8 py-6">
+        <h2 className="text-2xl font-semibold tracking-tight">{p.lane.origin} to {p.lane.destination}</h2>
+        <p className="mt-1 text-sm text-slate-400">Load {p.shipmentId} for {p.customerId}, {p.lane.miles} miles, delivering to {p.facility.id}</p>
+        <p className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
+          Carriers on file for this load, straight from the TMS. Press “Run coverage agent” and the economics appear here as the agent reads the load brief.
+        </p>
+        <div className="mt-6"><Carriers brief={p} events={[]} detailed /></div>
+      </section>
+    );
+  }
   if (!brief) {
     return (
       <section className="grid min-h-0 place-items-center px-8 text-center">
         <div>
           <p className="text-lg text-slate-300">Pick a load and run the agent.</p>
-          <p className="mt-1 text-sm text-slate-500">Its economics appear here the moment the agent reads the load brief.</p>
+          <p className="mt-1 text-sm text-slate-500">
+            {preview?.loading ? "Loading this load’s carriers from the TMS…" : preview?.error ? `Carrier preview unavailable (${preview.error}). The agent can still run.` : "Its economics appear here the moment the agent reads the load brief."}
+          </p>
         </div>
       </section>
     );
