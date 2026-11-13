@@ -3,13 +3,24 @@
 import type { ToolDeps } from "@/lib/tools";
 import { loadBriefResult } from "@/lib/intel";
 import { tms } from "@/lib/tms";
-import { devRespond } from "./devDeps";
+import { respond, type SimCarrier } from "@/lib/carrierSim";
 
 export { tms };
 
+const STYLES: SimCarrier["style"][] = ["blunt", "friendly", "formal"];
+
 export const deps: ToolDeps = {
   loadBrief: (id) => loadBriefResult(id),
-  carrier: { respond: devRespond }, // swap for lib/carrierSim.ts when Advika lands it
+  carrier: {
+    respond: async (carrierId, offer, history, brief) => {
+      const c = brief.carriers.find((x) => x.vendorId === carrierId)!; // negotiate tool already checked it exists
+      const style = STYLES[carrierId.length % STYLES.length];
+      const turns = history.filter((t) => t.amount != null).map((t) => ({ from: t.from, amount: t.amount! }));
+      // shortcut: no market quote → PRD lane-history target; fine for the hero lane, revisit for others.
+      const target = brief.market?.target ?? (brief.laneHistory.avgLinehaulPerMile ?? 2.47) * brief.lane.miles;
+      return respond({ vendorId: c.vendorId, name: c.name, score: c.score, style }, offer, turns, target);
+    },
+  },
   tms,
 };
 
