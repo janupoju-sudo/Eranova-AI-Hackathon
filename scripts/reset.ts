@@ -1,34 +1,37 @@
 import { pathToFileURL } from "node:url";
 import { tms, type TmsResult } from "../lib/tms";
-import type { Shipment } from "../lib/intel";
+
+/** Live wire format (GET /shipments/{id}): cost lines are vendor_costs[] keyed by cost_id. */
+type Cost = { cost_id: string; charge_code: string; status: string; description?: string };
+type RawShipment = { status: string; vendor_costs: Cost[] };
 
 /** Jay's add_cost tool must use this prefix in descriptions so resets own only agent costs. */
 export const AGENT_COST_PREFIX = "[coverage-agent]";
 
 export async function resetShipment(shipmentId: string, options: { execute?: boolean; source?: typeof tms } = {}): Promise<TmsResult<{ shipmentId: string; dryRun: boolean; cancelledCostIds: string[] }>> {
   const source = options.source ?? tms;
-  const shipment = await source.getShipment<Shipment>(shipmentId);
+  const shipment = await source.getShipment<RawShipment>(shipmentId);
   if (!shipment.ok) return shipment;
   const s = shipment.result;
-  if (!s || !Array.isArray(s.costs) || !s.status)
+  if (!s || !Array.isArray(s.vendor_costs) || !s.status)
     return { ok: false, status: 502, error: "INVALID_SHIPMENT", detail: "Expected shipment status and cost lines; verify API schema before reset." };
   if (!["BOOKED", "COVERED"].includes(s.status))
     return { ok: false, status: 409, error: "UNSAFE_RESET_STATUS", detail: "Only BOOKED or COVERED demo shipments can be reset." };
-  const costs = s.costs.filter(cost => ["FSC", "LUM"].includes(cost.charge_code) && cost.status !== "CANCELLED" && cost.description?.startsWith(AGENT_COST_PREFIX));
-  if (!options.execute) return { ok: true, result: { shipmentId, dryRun: true, cancelledCostIds: costs.map(cost => cost.id) } };
+  const costs = s.vendor_costs.filter(cost => ["FSC", "LUM"].includes(cost.charge_code) && cost.status !== "CANCELLED" && cost.description?.startsWith(AGENT_COST_PREFIX));
+  if (!options.execute) return { ok: true, result: { shipmentId, dryRun: true, cancelledCostIds: costs.map(cost => cost.cost_id) } };
   if (s.status === "COVERED") {
     const uncovered = await source.uncover(shipmentId);
     if (!uncovered.ok) return uncovered;
   }
   const cancelledCostIds: string[] = [];
   for (const cost of costs) {
-    const cancelled = await source.updateCost(shipmentId, cost.id, { status: "CANCELLED" });
-    if (!cancelled.ok) return { ...cancelled, detail: { message: "Reset partially completed. Re-run to continue; already-cancelled costs are skipped.", failedCostId: cost.id, cancelledCostIds, upstream: cancelled.detail } };
-    cancelledCostIds.push(cost.id);
+    const cancelled = await source.updateCost(shipmentId, cost.cost_id, { status: "CANCELLED" });
+    if (!cancelled.ok) return { ...cancelled, detail: { message: "Reset partially completed. Re-run to continue; already-cancelled costs are skipped.", failedCostId: cost.cost_id, cancelledCostIds, upstream: cancelled.detail } };
+    cancelledCostIds.push(cost.cost_id);
   }
-  const verified = await source.getShipment<Shipment>(shipmentId);
+  const verified = await source.getShipment<RawShipment>(shipmentId);
   if (!verified.ok) return verified;
-  if (verified.result.status !== "BOOKED" || verified.result.costs.some(cost => costs.some(target => target.id === cost.id) && cost.status !== "CANCELLED"))
+  if (verified.result.status !== "BOOKED" || verified.result.vendor_costs.some(cost => costs.some(target => target.cost_id === cost.cost_id) && cost.status !== "CANCELLED"))
     return { ok: false, status: 409, error: "RESET_NOT_CONFIRMED", detail: "TMS did not confirm BOOKED status and cancelled agent cost lines." };
   return { ok: true, result: { shipmentId, dryRun: false, cancelledCostIds } };
 }

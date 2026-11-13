@@ -128,25 +128,23 @@ test("pagination stops at the cap instead of returning partial data", async () =
 });
 
 test("reset previews without writes and preserves unrelated costs when executing", async () => {
-  const state = structuredClone(shipment);
-  state.status = "COVERED";
-  state.costs = [
-    { id: "agent-fuel", charge_code: "FSC", amount: 527.25, status: "CONFIRMED", description: "[coverage-agent] fuel" },
-    { id: "manual-lumper", charge_code: "LUM", amount: 20, status: "CONFIRMED", description: "manual charge" },
-  ];
+  const state = { shipment_id: shipment.id, status: "COVERED", vendor_costs: [
+    { cost_id: "agent-fuel", charge_code: "FSC", amount: 527.25, status: "CONFIRMED", description: "[coverage-agent] fuel" },
+    { cost_id: "manual-lumper", charge_code: "LUM", amount: 20, status: "CONFIRMED", description: "manual charge" },
+  ] };
   const writes: string[] = [];
   const source = createTmsClient({ baseUrl: "https://example.invalid", apiKey: "test-only", now: () => new Date("2026-11-13T19:00:00Z"), fetch: async (input, init) => {
     const path = new URL(String(input)).pathname;
     if (init?.method === "GET") return json(state);
     writes.push(path);
     if (path.endsWith("/uncover")) state.status = "BOOKED";
-    if (path.endsWith("/agent-fuel")) state.costs[0].status = "CANCELLED";
+    if (path.endsWith("/agent-fuel")) state.vendor_costs[0].status = "CANCELLED";
     return json({});
   } });
   assert.equal((await resetShipment("7300176", { source })).ok, true);
   assert.deepEqual(writes, []);
   assert.equal((await resetShipment("7300176", { source, execute: true })).ok, true);
-  assert.equal(state.costs[1].status, "CONFIRMED");
+  assert.equal(state.vendor_costs[1].status, "CONFIRMED");
   assert.equal(writes.length, 2);
   writes.length = 0;
   assert.equal((await resetShipment("7300176", { source, execute: true })).ok, true);
@@ -157,7 +155,7 @@ test("reset stops after the first failed cost cancellation and reports partial p
   const writes: string[] = [];
   const source = createTmsClient({ baseUrl: "https://example.invalid", apiKey: "test-only", now: () => new Date("2026-11-13T19:00:00Z"), fetch: async (input, init) => {
     const path = new URL(String(input)).pathname;
-    if (init?.method === "GET") return json({ ...shipment, costs: ["a", "b"].map(id => ({ id, charge_code: "FSC", amount: 10, status: "CONFIRMED", description: "[coverage-agent] fuel" })) });
+    if (init?.method === "GET") return json({ shipment_id: shipment.id, status: "BOOKED", vendor_costs: ["a", "b"].map(cost_id => ({ cost_id, charge_code: "FSC", amount: 10, status: "CONFIRMED", description: "[coverage-agent] fuel" })) });
     writes.push(path); return json({ error: "CONFLICT" }, 409);
   } });
   const result = await resetShipment(shipment.id, { source, execute: true });

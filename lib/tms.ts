@@ -85,7 +85,7 @@ export function createTmsClient(options: TmsOptions = {}) {
     generateRateCon: (shipmentId: string) => request("POST", `/shipments/${id(shipmentId)}/documents/generate`, { doc_type: "RATE_CONFIRMATION" }),
     dispatch: (shipmentId: string, body: unknown) => request("POST", `/shipments/${id(shipmentId)}/dispatch`, body),
     setAppointment: (shipmentId: string, stopSeq: number, body: unknown) => request("PUT", `/shipments/${id(shipmentId)}/stops/${stopSeq}/appointment`, body),
-    addShipmentNote: (shipmentId: string, text: string) => request("POST", `/shipments/${id(shipmentId)}/notes`, { text }),
+    addShipmentNote: (shipmentId: string, text: string) => request("POST", `/shipments/${id(shipmentId)}/notes`, { note: text }),
     addFacilityNote: (facilityId: string, text: string) => request("POST", `/facilities/${id(facilityId)}/notes`, { text }),
   };
 }
