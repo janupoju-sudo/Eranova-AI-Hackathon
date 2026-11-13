@@ -1,4 +1,5 @@
-import type { LoadBrief } from "@/lib/types";
+import type { AgentEvent, LoadBrief } from "@/lib/types";
+import Carriers from "./Carriers";
 import { gpPctAt, usd } from "./format";
 
 function Row({ k, v, strong, tone }: { k: string; v: string; strong?: boolean; tone?: "bad" | "ok" }) {
@@ -32,7 +33,7 @@ function MarginMeter({ gp, floor }: { gp: number | null; floor: number }) {
   );
 }
 
-export default function Economics({ brief, offer }: { brief: LoadBrief | null; offer: number | null }) {
+export default function Economics({ brief, offer, events }: { brief: LoadBrief | null; offer: number | null; events: AgentEvent[] }) {
   if (!brief) {
     return (
       <aside className="flex min-h-0 flex-col border-l border-white/10">
@@ -63,6 +64,7 @@ export default function Economics({ brief, offer }: { brief: LoadBrief | null; o
           <Row k="Expected detention" v={`${usd(brief.risk.expectedDetention$, 2)} · ${brief.risk.expectedDwellH.toFixed(1)} h dwell`} />
           {brief.market && <Row k="Market target" v={`${usd(brief.market.target)}  (${usd(brief.market.low)}–${usd(brief.market.high)})`} />}
         </div>
+        <Carriers brief={brief} events={events} />
         <div className="flex flex-wrap gap-1.5">
           {brief.flags.map((f) => (
             <span key={f} className={`rounded-full px-2.5 py-1 text-xs ${f.toLowerCase().includes("unreachable") ? "bg-rose-500/15 text-rose-200" : "bg-white/5 text-slate-300"}`}>{f}</span>
