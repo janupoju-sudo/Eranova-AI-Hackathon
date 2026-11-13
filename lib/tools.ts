@@ -62,6 +62,7 @@ export interface RunState {
   coveredBy: Deal | null;
   failedCarriers: Record<string, string>; // carrierId -> reason (e.g. 409 detail)
   escalation: string | null;
+  appointment: { start: string; end: string; tz: string } | null;
 }
 
 export function newRunState(runId: string, shipmentId: string): RunState {
@@ -76,6 +77,7 @@ export function newRunState(runId: string, shipmentId: string): RunState {
     coveredBy: null,
     failedCarriers: {},
     escalation: null,
+    appointment: null,
   };
 }
 
@@ -340,25 +342,25 @@ export function createTools(ctx: ToolContext) {
         if (l > norm(dw.end)) return fail("too_late", `Window ends after the delivery window ${dw.end}.`);
         if (brief.mabdDate && l.slice(0, 10) > brief.mabdDate) return fail("after_mabd", `Window ends after MABD ${brief.mabdDate}.`);
         const body = { status: "REQUESTED", scheduled_window: { earliest_local: e, latest_local: l, timezone: dw.tz } };
+        state.appointment = { start: e, end: l, tz: dw.tz };
         if (!ctx.writesEnabled) return dryRun("request_appointment", { stop_seq: a.stop_seq, ...body });
         return fromTms(await deps.tms.setAppointment(a.shipment_id, a.stop_seq, body), shipmentSummary);
       }),
     }),
 
     add_note: tool({
-      description: "Write an internal note on the load in the TMS explaining your decisions (carrier choice, price vs ceiling, risks priced in, errors recovered from).",
-      inputSchema: z.object({ shipment_id: z.string(), text: z.string().min(10) }),
-      execute: traced(ctx, "add_note", async ({ shipment_id, text }: { shipment_id: string; text: string }) => {
+      description:
+        "Write the decision note on the load in the TMS. The system fills in every fact (carrier, price vs ceiling, buy breakdown, GP, errors recovered, appointment); you supply only `why`: one sentence on why this carrier (or why the load is still open).",
+      inputSchema: z.object({ shipment_id: z.string(), why: z.string().min(10).max(240) }),
+      execute: traced(ctx, "add_note", async ({ shipment_id, why }: { shipment_id: string; why: string }) => {
         if (shipment_id !== state.shipmentId) return fail("wrong_shipment", `This run is for shipment ${state.shipmentId}.`);
-        const note = `[Coverage Agent] ${text}`;
+        const brief = requireBrief();
+        if (!brief) return NO_BRIEF;
+        const note = decisionNote(state, brief, why);
         if (!ctx.writesEnabled) return dryRun("add_note", { note });
-        return fromTms(await deps.tms.addShipmentNote(shipment_id, note), (d) => {
-          const ev = (d ?? {}) as Record<string, unknown>;
-          return { event_id: ev.event_id ?? ev.id, saved: true };
-        });
+        return fromTms(await deps.tms.addShipmentNote(shipment_id, note), () => ({ saved: true, note }));
       }),
     }),
-
     request_approval: tool({
       description:
         "Pause and ask a human to approve a linehaul above the margin ceiling. Provide the carrier, its best price, and why. The run stops here until the human decides.",
@@ -393,15 +395,18 @@ export function createTools(ctx: ToolContext) {
     }),
 
     escalate_to_sales: tool({
-      description: "Send sales a lane repricing recommendation (also saved as a note on the load). Use when the margin floor is unreachable at market/historical carrier rates.",
-      inputSchema: z.object({ shipment_id: z.string(), text: z.string().min(20) }),
-      execute: traced(ctx, "escalate_to_sales", async ({ shipment_id, text }: { shipment_id: string; text: string }) => {
+      description:
+        "Send sales a lane repricing recommendation (saved as a note on the load). The system fills in lane history, floor, market and the sell needed to hold the floor; you supply `context`: one sentence.",
+      inputSchema: z.object({ shipment_id: z.string(), context: z.string().min(10).max(240) }),
+      execute: traced(ctx, "escalate_to_sales", async ({ shipment_id, context }: { shipment_id: string; context: string }) => {
         if (shipment_id !== state.shipmentId) return fail("wrong_shipment", `This run is for shipment ${state.shipmentId}.`);
-        state.escalation = text;
-        const note = `[Coverage Agent → Sales] Lane repricing recommendation: ${text}`;
+        const brief = requireBrief();
+        if (!brief) return NO_BRIEF;
+        const note = salesNote(state, brief, context);
+        state.escalation = note;
         if (!ctx.writesEnabled) return dryRun("escalate_to_sales", { note });
         const r = await deps.tms.addShipmentNote(shipment_id, note);
-        return r.ok ? { ok: true, result: { escalated: true, savedAsNote: true } } : fromTms(r);
+        return r.ok ? { ok: true, result: { escalated: true, note } } : fromTms(r);
       }),
     }),
   };
@@ -409,3 +414,50 @@ export function createTools(ctx: ToolContext) {
 
 export type CoverageTools = ReturnType<typeof createTools>;
 
+
+// ---------- Notes: facts come from code, the model only adds one sentence ----------
+
+const usd = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/** Lowest price any carrier offered (accepted or countered), used when the load is still open. */
+function bestQuote(state: RunState): { carrierId: string; amount: Money } | null {
+  let best: { carrierId: string; amount: Money } | null = null;
+  for (const [carrierId, turns] of Object.entries(state.negotiations)) {
+    if (state.failedCarriers[carrierId]) continue;
+    for (const t of turns) if (t.from === "carrier" && t.amount != null && (!best || t.amount < best.amount)) best = { carrierId, amount: t.amount };
+  }
+  return best;
+}
+
+export function decisionNote(state: RunState, brief: LoadBrief, why: string): string {
+  const cap = brief.margin.maxLinehaul;
+  const lines: string[] = [];
+  const deal = state.coveredBy ?? (bestQuote(state) && { ...bestQuote(state)!, driver: undefined });
+  if (state.coveredBy) {
+    const over = state.coveredBy.amount - cap;
+    lines.push(`[Coverage Agent] Covered by ${state.coveredBy.carrierId} at ${usd(state.coveredBy.amount)} linehaul vs ${usd(cap)} ceiling (${brief.margin.floorPct}% floor)${over > 0.005 ? `, human-approved +${usd(over)}` : ""}.`);
+  } else {
+    lines.push(`[Coverage Agent] NOT covered: no carrier within the ${usd(cap)} ceiling${deal ? `; best quote ${deal.carrierId} ${usd(deal.amount)}` : ""}${state.approvedLinehaul == null && deal ? " (over-ceiling approval declined)" : ""}.`);
+  }
+  if (deal) {
+    const p = priceImpact(brief, deal.amount);
+    lines.push(`Buy ${usd(p.totalBuy)} = linehaul + FSC ${usd(brief.margin.carrierFuel$)} + LUM ${usd(brief.risk.expectedLumper$)} → GP ${p.gpPct}% (${p.gpWithDetentionPct}% incl. expected detention ${usd(brief.risk.expectedDetention$)}, ${brief.risk.expectedDwellH} h dwell).`);
+  }
+  const failed = Object.entries(state.failedCarriers);
+  if (failed.length) lines.push(`Recovered: ${failed.map(([id, d]) => `${id} rejected by TMS — ${d}`).join("; ")}`);
+  if (state.appointment) lines.push(`Appointment requested ${state.appointment.start.replace("T", " ").slice(5, 16)}–${state.appointment.end.slice(11, 16)} ${state.appointment.tz}; a human books it in the portal.`);
+  lines.push(`Why: ${why}`);
+  return lines.join("\n");
+}
+
+export function salesNote(state: RunState, brief: LoadBrief, context: string): string {
+  const h = brief.laneHistory;
+  const linehaul = state.coveredBy?.amount ?? bestQuote(state)?.amount ?? brief.market?.target ?? brief.margin.maxLinehaul;
+  const p = priceImpact(brief, linehaul);
+  return [
+    `[Coverage Agent → Sales] Reprice ${brief.lane.origin} → ${brief.lane.destination} (${brief.customerId} → ${brief.facility.id}).`,
+    `Lane history: ${h.loads} loads${h.avgLinehaulPerMile != null ? ` at $${h.avgLinehaulPerMile}/mi` : ""}${h.avgGpPct != null ? `, avg GP ${h.avgGpPct}%` : ""} vs ${brief.margin.floorPct}% floor${brief.market ? `; market linehaul ${usd(brief.market.target)}` : ""}.`,
+    `At today's buy (${usd(linehaul)} linehaul + dock costs) GP is ${p.gpWithDetentionPct}% incl. detention; to hold ${brief.margin.floorPct}% the sell needs to be ≥ ${usd(p.recommendedSell)} (now ${usd(brief.sell.total)}).`,
+    `Context: ${context}`,
+  ].join("\n");
+}

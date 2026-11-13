@@ -17,7 +17,10 @@ export const deps: ToolDeps = {
       const style = STYLES[carrierId.length % STYLES.length];
       const turns = history.filter((t) => t.amount != null).map((t) => ({ from: t.from, amount: t.amount! }));
       // shortcut: no market quote → PRD lane-history target; fine for the hero lane, revisit for others.
-      const target = brief.market?.target ?? (brief.laneHistory.avgLinehaulPerMile ?? 2.47) * brief.lane.miles;
+      const market = brief.market?.target ?? (brief.laneHistory.avgLinehaulPerMile ?? 2.47) * brief.lane.miles;
+      // Demo trap: a carrier with compliance warnings (RUSTYRIG) undercuts the ceiling on every load, so the
+      // agent tries to cover it and the TMS answers with the real 409. Everyone else prices off the market.
+      const target = c.warnings.length ? brief.margin.maxLinehaul : market;
       return respond({ vendorId: c.vendorId, name: c.name, score: c.score, style }, offer, turns, target);
     },
   },
