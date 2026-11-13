@@ -7,7 +7,7 @@
 import { hasToolCall, isStepCount, streamText, type ModelMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
 import type { AgentEvent, Money } from "./types";
-import { createTools, newRunState, type RunState, type ToolDeps } from "./tools";
+import { createTools, newRunState, type Autonomy, type RunState, type ToolDeps } from "./tools";
 
 const MAX_STEPS = 24;
 
@@ -20,7 +20,8 @@ Rules (non-negotiable):
 4. On any tool error, read "detail", say in one sentence what happened, and adapt (e.g. a 409 on cover means that carrier cannot haul it — move to the next best carrier). Never retry the exact same failing call.
 5. Collect quotes before deciding: the top 3 eligible carriers by score AND the eligible budget carrier (complianceLight YELLOW), every run. Open below maxLinehaul; when a carrier counters above the ceiling, counter back AT maxLinehaul once, then move on (max 3 rounds per carrier; never repeat an offer). Then cover the CHEAPEST carrier that accepted at or below maxLinehaul — no approval needed. Don't pre-judge carrier warnings: the TMS decides compliance at cover. If cover fails, cover the next-cheapest accepted carrier. Only if no carrier accepted within the ceiling, call request_approval with the most reliable carrier's best price and a one-sentence reason, then stop and wait. When the floor is unreachable at historical rates, call escalate_to_sales at the end.
 6. After covering: add_cost FSC, add_cost LUM, generate_rate_con, request_appointment for the delivery stop (inside the delivery window, not early, on or before MABD — prefer a morning window inside receiving hours), then add_note. The system writes the facts (carrier, price vs ceiling, buy breakdown, GP, errors recovered, appointment) — you give only a one-sentence "why" for the carrier choice. escalate_to_sales works the same way: one sentence of context; the numbers are filled in by code.
-7. Never ask for, store or handle facility portal credentials. A human books the portal appointment.
+7. Autonomy is set in the first message. In "supervised" mode, call request_approval before EVERY cover (even within the ceiling) with the carrier and its accepted price, then stop and wait.
+8. Never ask for, store or handle facility portal credentials. A human books the portal appointment.
 
 Style: before each tool call, write one or two short sentences of reasoning (these are shown live to the user). Be concrete, use the brief's dollar figures. When everything is done, finish with a 2–3 sentence summary.`;
 
@@ -36,6 +37,7 @@ const g = globalThis as unknown as { __coverageRuns?: Map<string, StoredRun> };
 export const runs: Map<string, StoredRun> = (g.__coverageRuns ??= new Map());
 
 export interface RunOptions {
+  autonomy?: Autonomy;
   deps: ToolDeps;
   emit: (e: AgentEvent) => void;
   writesEnabled: boolean;
@@ -49,8 +51,8 @@ function model() {
 export async function startRun(shipmentId: string, opts: RunOptions): Promise<StoredRun> {
   const runId = `run_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
   const run: StoredRun = {
-    state: newRunState(runId, shipmentId),
-    messages: [{ role: "user", content: `Cover shipment ${shipmentId}. Run id ${runId}.` }],
+    state: newRunState(runId, shipmentId, opts.autonomy),
+    messages: [{ role: "user", content: `Cover shipment ${shipmentId}. Run id ${runId}. Autonomy: ${opts.autonomy ?? "auto"}.` }],
     status: "running",
   };
   runs.set(runId, run);
@@ -76,9 +78,10 @@ export async function resumeRun(
   let text: string;
   if (decision === "approved") {
     run.state.approvedLinehaul = offer; // code-enforced new ceiling, exactly what the human saw
+    run.state.approvedCarrier = pending.carrierId;
     text =
       `Human APPROVED a linehaul of up to $${offer.toFixed(2)} for ${pending.carrierId} (resulting GP ${pending.numbers.resultingGpPct}%). ` +
-      `Close the deal with negotiate at that amount, then cover and finish the post-cover steps. Then escalate_to_sales.`;
+      `If ${pending.carrierId} already accepted that amount, go straight to cover; otherwise negotiate at that amount, then cover. Finish the post-cover steps.`;
   } else {
     text =
       `Human REJECTED going above the $${run.state.brief?.margin.maxLinehaul.toFixed(2)} ceiling. Do not cover. ` +

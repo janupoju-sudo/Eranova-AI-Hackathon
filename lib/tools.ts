@@ -50,8 +50,14 @@ export interface Deal {
   driver?: { name: string; phone: string };
 }
 
+/** draft = no TMS writes · supervised = human approves every cover · auto = approval only above the ceiling */
+export type Autonomy = "draft" | "supervised" | "auto";
+
 export interface RunState {
   runId: string;
+  autonomy: Autonomy;
+  /** Carrier the human approved (supervised mode requires a match at cover). */
+  approvedCarrier: string | null;
   shipmentId: string;
   brief: LoadBrief | null;
   /** Linehaul ceiling raised by a human approval (null = use brief.margin.maxLinehaul). */
@@ -65,9 +71,11 @@ export interface RunState {
   appointment: { start: string; end: string; tz: string } | null;
 }
 
-export function newRunState(runId: string, shipmentId: string): RunState {
+export function newRunState(runId: string, shipmentId: string, autonomy: Autonomy = "auto"): RunState {
   return {
     runId,
+    autonomy,
+    approvedCarrier: null,
     shipmentId,
     brief: null,
     approvedLinehaul: null,
@@ -96,7 +104,8 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 
 export function ceiling(state: RunState): Money {
   if (!state.brief) return 0;
-  return state.approvedLinehaul ?? state.brief.margin.maxLinehaul;
+  // An approval can only raise the ceiling (supervised approvals may be below it).
+  return Math.max(state.brief.margin.maxLinehaul, state.approvedLinehaul ?? 0);
 }
 
 function fail(error: string, detail: string): ToolOut {
@@ -250,6 +259,9 @@ export function createTools(ctx: ToolContext) {
         }
         const cap = ceiling(state);
         if (amount > cap) return fail("over_ceiling", `$${amount.toFixed(2)} exceeds ceiling $${cap.toFixed(2)}. Request approval first.`);
+        if (state.autonomy === "supervised" && (state.approvedCarrier !== carrier_id || amount > (state.approvedLinehaul ?? 0))) {
+          return fail("approval_required", `Supervised mode: a human approves every cover. Call request_approval for ${carrier_id} at $${amount.toFixed(2)} first.`);
+        }
 
         const body: Record<string, unknown> = {
           carrier_id,

@@ -17,6 +17,6 @@ export async function POST(req: Request) {
     return Response.json({ error: "conflict", detail: `Run ${runId} is ${run.status}, not awaiting approval.` }, { status: 409 });
   }
   return ndjsonStream(async (emit) => {
-    await resumeRun(runId, decision, { deps, emit, writesEnabled: writesEnabled() }, note);
+    await resumeRun(runId, decision, { deps, emit, writesEnabled: writesEnabled() && run.state.autonomy !== "draft" }, note);
   });
 }
