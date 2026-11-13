@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import hero from "./loadBrief.hero.json";
+import hero from "./loadBrief.prd.json";
+import liveHero from "./loadBrief.hero.json";
 import events from "./events.sample.json";
 import type { AgentEvent, LoadBrief } from "../lib/types";
-import { computeBrief, loadBriefResult, marginProtected, priceImpact, scoreCarrier, type Facility, type Shipment, type Vendor, type IntelSource } from "../lib/intel";
+import { computeBrief, loadBriefResult, marginProtected, priceImpact, scoreCarrier, toFacility, type Facility, type Shipment, type Vendor, type IntelSource } from "../lib/intel";
 import { createTmsClient } from "../lib/tms";
 import { resetShipment } from "../scripts/reset";
 
@@ -34,6 +35,12 @@ test("margin protected = dock costs priced in + overpay avoided vs lane history"
   const hist = b.laneHistory.avgLinehaulPerMile! * b.lane.miles;
   assert.equal(marginProtected(b, hist + 500), Math.round(dock * 100) / 100); // paid above history: only dock costs count
   assert.equal(marginProtected(b, hist - 100), Math.round((dock + 100) * 100) / 100);
+});
+
+test("facility adapter accepts null closed days and orders receiving hours", () => {
+  const mapped = toFacility({ facility_id: "dock", receiving_hours: { fri: { open: "06:00", close: "14:00" }, sun: null, mon: { open: "06:00", close: "14:00" } } });
+  assert.equal(mapped.receiving_hours, "mon/fri 06:00–14:00");
+  assert.equal(toFacility({ facility_id: "dock", receiving_hours: { sun: null } }).receiving_hours, null);
 });
 
 test("hero economics match the PRD and checked-in fixture", () => {
@@ -67,7 +74,7 @@ test("RUSTYRIG stays eligible with warning; BADWOLF and wrong equipment are excl
 });
 
 test("fixture selection is explicit and HTTP errors do not throw into tool callers", async () => {
-  assert.deepEqual(await loadBriefResult(hero.shipmentId, { fixture: true }), { ok: true, result: fixture });
+  assert.deepEqual(await loadBriefResult(hero.shipmentId, { fixture: true }), { ok: true, result: liveHero });
   assert.equal((await loadBriefResult("missing", { fixture: true })).ok, false);
   const client = createTmsClient({ baseUrl: "https://example.invalid", apiKey: "test-only", fetch: async () => json({ error: "EXPIRED", detail: "CARGO policy expired" }, 409), now: () => new Date("2026-11-13T19:00:00Z") });
   assert.deepEqual(await client.cover("hero", {}), { ok: false, status: 409, error: "EXPIRED", detail: { error: "EXPIRED", detail: "CARGO policy expired" } });
