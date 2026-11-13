@@ -18,7 +18,7 @@ export default function ApprovalPanel({ approval, onApprove, onReject }: { appro
           <div className="flex shrink-0 gap-6 text-right">
             {n.offer != null && <Stat k="Offer" v={usd(Number(n.offer))} />}
             {n.maxLinehaul != null && <Stat k="Ceiling" v={usd(Number(n.maxLinehaul))} />}
-            {n.overCeiling != null && <Stat k="Over by" v={usd(Number(n.overCeiling))} bad />}
+            {n.overCeiling != null && (Number(n.overCeiling) > 0 ? <Stat k="Over by" v={usd(Number(n.overCeiling))} bad /> : <Stat k="Under ceiling" v={usd(-Number(n.overCeiling))} />)}
             {n.resultingGpPct != null && <Stat k="Resulting GP" v={`${n.resultingGpPct}%`} bad />}
           </div>
         </div>

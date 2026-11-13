@@ -11,8 +11,16 @@ const label: Record<RunStatus, { text: string; cls: string }> = {
   error: { text: "Backend error", cls: "bg-rose-500/15 text-rose-300" },
 };
 
-export default function Header({ status, protectedUsd, mode, onMode, onStart, onReset }: {
+const DIAL = [
+  { k: "draft", t: "Draft", tip: "Agent does everything; nothing is written to the TMS" },
+  { k: "supervised", t: "Supervised", tip: "A human approves every cover" },
+  { k: "auto", t: "Auto", tip: "Covers within the margin ceiling; human approves exceptions" },
+] as const;
+type Autonomy = (typeof DIAL)[number]["k"];
+
+export default function Header({ status, protectedUsd, mode, onMode, onStart, onReset, autonomy, onAutonomy }: {
   status: RunStatus; protectedUsd: number; mode: "live" | "demo"; onMode: (m: "live" | "demo") => void; onStart: () => void; onReset: () => void;
+  autonomy?: Autonomy; onAutonomy?: (a: Autonomy) => void; // dial hidden in demo mode, locked while a run is in progress
 }) {
   const s = label[status];
   return (
@@ -34,6 +42,17 @@ export default function Header({ status, protectedUsd, mode, onMode, onStart, on
             <button key={m} onClick={() => mode !== m && onMode(m)} className={`rounded-md px-3 py-1.5 font-medium capitalize transition ${mode === m ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"}`}>{m}</button>
           ))}
         </div>
+        {autonomy && (
+          <div role="radiogroup" aria-label="Autonomy" className="flex items-center gap-2">
+            <span className="text-[10px] uppercase tracking-widest text-slate-500">Autonomy</span>
+            <div className="flex rounded-lg border border-white/10 p-0.5 text-xs">
+              {DIAL.map((d) => (
+                <button key={d.k} role="radio" aria-checked={autonomy === d.k} title={d.tip} disabled={!onAutonomy} onClick={() => onAutonomy?.(d.k)}
+                  className={`rounded-md px-2.5 py-1.5 font-medium transition disabled:cursor-not-allowed ${autonomy === d.k ? "bg-amber-400/20 text-amber-200" : "text-slate-500 enabled:hover:text-slate-300"}`}>{d.t}</button>
+              ))}
+            </div>
+          </div>
+        )}
         <span className={`rounded-full px-3 py-1 text-xs font-medium ${s.cls}`}>{s.text}</span>
         {status === "idle" ? (
           <button onClick={onStart} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300">Run coverage agent</button>
