@@ -9,7 +9,6 @@ export const tms = devTms;
 
 /**
  * TMS writes stay OFF until the team flips TMS_WRITES=1 in .env.local (AGENTS.md rule 5:
- * no shipment writes before 1:20 PM). With writes off, write tools return a dry-run result
- * and cover simulates the cargo-insurance 409 from the brief.
+ * no shipment writes before 1:20 PM). With writes off, write tools return a dry-run result.
  */
 export const writesEnabled = () => process.env.TMS_WRITES === "1";

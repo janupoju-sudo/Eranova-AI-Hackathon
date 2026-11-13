@@ -123,11 +123,8 @@ async function call(method: string, path: string, body?: unknown): Promise<TmsRe
 
 export const devTms = {
   listShipments: (q: Record<string, string>) => call("GET", `/shipments?${new URLSearchParams(q)}`),
-  getShipment: (id: string) => call("GET", `/shipments/${id}`),
   cover: (id: string, body: Record<string, unknown>) => call("POST", `/shipments/${id}/cover`, body),
-  uncover: (id: string, body: Record<string, unknown>) => call("POST", `/shipments/${id}/uncover`, body),
   addCost: (id: string, body: Record<string, unknown>) => call("POST", `/shipments/${id}/costs`, body),
-  updateCost: (id: string, costId: string, body: Record<string, unknown>) => call("PUT", `/shipments/${id}/costs/${costId}`, body),
   generateRateCon: (id: string) => call("POST", `/shipments/${id}/documents/generate`, { doc_type: "RATE_CONFIRMATION" }),
   setAppointment: (id: string, seq: number, body: Record<string, unknown>) => call("PUT", `/shipments/${id}/stops/${seq}/appointment`, body),
   addShipmentNote: (id: string, body: Record<string, unknown>) => call("POST", `/shipments/${id}/notes`, body),

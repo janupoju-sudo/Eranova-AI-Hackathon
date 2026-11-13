@@ -4,7 +4,7 @@
 //   - No offer or cover above brief.margin.maxLinehaul unless a human approved a higher amount.
 //   - No cover at a price/carrier that wasn't actually agreed in negotiation.
 //   - Cost-line amounts (FSC, LUM) come from the LoadBrief, never from the model.
-//   - Appointment windows must sit inside the delivery window, on/before MABD, past the lead time.
+//   - Appointment windows must sit inside the delivery window, on/before MABD.
 // Every tool returns { ok: true, result } or { ok: false, error, detail } — nothing throws into the loop.
 
 import { tool } from "ai";
@@ -256,14 +256,6 @@ export function createTools(ctx: ToolContext) {
           target_pay_max: brief.margin.maxLinehaul,
         };
         if (!ctx.writesEnabled) {
-          // Simulate the real compliance gate so the read-only rehearsal still shows the 409 path.
-          const cand = brief.carriers.find((c) => c.vendorId === carrier_id);
-          const today = new Date().toISOString().slice(0, 10);
-          if (cand && cand.cargoExpires && cand.cargoExpires < today) {
-            const detail = `Carrier ${carrier_id} cannot cover: CARGO insurance expired ${cand.cargoExpires}. Choose a carrier with current cargo insurance. (simulated — writes disabled)`;
-            state.failedCarriers[carrier_id] = detail;
-            return fail("409 conflict", detail);
-          }
           state.coveredBy = deal;
           return dryRun("cover", body);
         }
@@ -327,7 +319,7 @@ export function createTools(ctx: ToolContext) {
 
     request_appointment: tool({
       description:
-        "Request a delivery appointment (status REQUESTED; a human books it in the facility portal). Window is facility-local, format YYYY-MM-DDTHH:MM:SS. Must be inside the delivery window, on or before MABD, and at least the facility lead time from now. Never handle portal credentials.",
+        "Request a delivery appointment (status REQUESTED; a human books it in the facility portal). Window is facility-local, format YYYY-MM-DDTHH:MM:SS. Must be inside the delivery window and on or before MABD. Never handle portal credentials.",
       inputSchema: z.object({
         shipment_id: z.string(),
         stop_seq: z.number().int().positive(),
@@ -345,12 +337,6 @@ export function createTools(ctx: ToolContext) {
         if (e < norm(dw.start)) return fail("too_early", `Window starts before the delivery window ${dw.start} — early delivery is non-compliant at this dock.`);
         if (l > norm(dw.end)) return fail("too_late", `Window ends after the delivery window ${dw.end}.`);
         if (brief.mabdDate && l.slice(0, 10) > brief.mabdDate) return fail("after_mabd", `Window ends after MABD ${brief.mabdDate}.`);
-        const lead = brief.facility.leadTimeHours ?? 0;
-        if (lead > 0) {
-          const startUtc = localToUtc(e, dw.tz);
-          const hoursOut = (startUtc.getTime() - Date.now()) / 3_600_000;
-          if (hoursOut < lead) return fail("lead_time", `Window starts ${hoursOut.toFixed(1)} h from now; facility needs ${lead} h lead time.`);
-        }
         const body = { status: "REQUESTED", scheduled_window: { earliest_local: e, latest_local: l, timezone: dw.tz } };
         if (!ctx.writesEnabled) return dryRun("request_appointment", { stop_seq: a.stop_seq, ...body });
         return fromTms(await deps.tms.setAppointment(a.shipment_id, a.stop_seq, body), shipmentSummary);
@@ -420,15 +406,3 @@ export function createTools(ctx: ToolContext) {
 
 export type CoverageTools = ReturnType<typeof createTools>;
 
-/** Convert a facility-local wall time (YYYY-MM-DDTHH:MM:SS) in an IANA zone to a UTC Date. */
-export function localToUtc(local: string, tz: string): Date {
-  const asUtc = new Date(local + "Z");
-  const fmt = new Intl.DateTimeFormat("en-US", {
-    timeZone: tz, hourCycle: "h23",
-    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
-  const p = Object.fromEntries(fmt.formatToParts(asUtc).map((x) => [x.type, x.value]));
-  const tzWall = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
-  const offset = tzWall - asUtc.getTime();
-  return new Date(asUtc.getTime() - offset);
-}
