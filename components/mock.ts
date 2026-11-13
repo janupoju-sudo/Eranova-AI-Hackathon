@@ -87,12 +87,11 @@ export const queue: QueueLoad[] = [
 const lake = heroBrief.carriers.find((c) => c.vendorId === "LAKESHORE")!;
 const sim: SimCarrier = { vendorId: lake.vendorId, name: lake.name, score: lake.score, style: "blunt" };
 
-function negotiationEvents(): { events: AgentEvent[]; finalOffer: number; openingAsk: number; driver: { name: string; phone: string } } {
+function negotiationEvents(): { events: AgentEvent[]; finalOffer: number; openingAsk: number } {
   const events: AgentEvent[] = [];
   const history: SimTurn[] = [];
   let openingAsk = 0;
   let finalOffer = 0;
-  let driver = { name: "", phone: "" };
   const money = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
   for (const [i, offer] of [2063, 2150, 2210].entries()) {
     const text = i === 0
@@ -107,7 +106,7 @@ function negotiationEvents(): { events: AgentEvent[]; finalOffer: number; openin
     if (r.counter) { history.push({ from: "carrier", amount: r.counter }); finalOffer = r.counter; }
     if (r.accept || r.final) break;
   }
-  return { events, finalOffer, openingAsk, driver };
+  return { events, finalOffer, openingAsk };
 }
 const neg = negotiationEvents();
 const LINEHAUL = neg.finalOffer; // carrier's final ask
