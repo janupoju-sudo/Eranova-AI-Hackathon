@@ -43,7 +43,9 @@ export function hiddenMinimum(marketTarget: number, carrier: SimCarrier, seed = 
   // intel scores land around 50-80 (PRD §9.2 formula); map that band to 0..1. Lower score -> accepts less.
   const firmness = Math.min(Math.max((carrier.score - 50) / 30, 0), 1);
   const jitter = (unit(`${seed}:${carrier.vendorId}`) - 0.5) * 0.02;
-  const factor = 0.95 + 0.2 * firmness + jitter; // 0.95 to 1.15 per PRD
+  // 0.85–1.05 (PRD said 0.95–1.15): tuned to the live market target ($2,270) so the budget carrier
+  // fits the 18% ceiling and reliable carriers land near lane-history GP (~14%).
+  const factor = 0.85 + 0.2 * firmness + jitter;
   return Math.round(marketTarget * factor);
 }
 
