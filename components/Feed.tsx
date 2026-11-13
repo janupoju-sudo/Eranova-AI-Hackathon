@@ -167,6 +167,14 @@ export default function Feed({ events, error, busy }: { events: AgentEvent[]; er
           const k = `${i}-${e.type}`;
           switch (e.type) {
             case "thought":
+              if (/^[✅⛔]/u.test(e.text)) {
+                const ok = e.text.startsWith("✅");
+                return (
+                  <p key={k} className={`animate-[fadein_.35s_ease-out] rounded-lg px-3 py-2 text-sm font-medium ${ok ? "bg-emerald-400/10 text-emerald-200" : "bg-rose-500/10 text-rose-200"}`}>
+                    {e.text.replace(/^[✅⛔]\s*/u, ok ? "✓ " : "✕ ")}
+                  </p>
+                );
+              }
               return <p key={k} className="animate-[fadein_.35s_ease-out] border-l-2 border-slate-600 pl-4 text-[15px] leading-relaxed text-slate-300">{plain(e.text)}</p>;
             case "tool_call": {
               const r = events.slice(i + 1).find((x) => x.type === "tool_result");

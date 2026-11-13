@@ -93,7 +93,12 @@ export async function resumeRun(
       `Write a note explaining why the load is still open, and escalate_to_sales with the repricing case.`;
   }
   if (note) text += ` Human note: ${note}`;
-  opts.emit({ type: "thought", text: decision === "approved" ? `✅ ${text}` : `⛔ ${text}` });
+  opts.emit({
+    type: "thought",
+    text: decision === "approved"
+      ? `✅ You approved ${pending.carrierId} at $${offer.toFixed(2)}.`
+      : `⛔ You declined to go over the $${run.state.brief?.margin.maxLinehaul.toFixed(2)} ceiling. The load stays open.`,
+  });
   run.messages.push({ role: "user", content: text });
   run.status = "running";
   await loop(run, opts);
