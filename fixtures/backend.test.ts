@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import hero from "./loadBrief.hero.json";
+import hero from "./loadBrief.prd.json";
+import liveHero from "./loadBrief.hero.json";
 import events from "./events.sample.json";
 import type { AgentEvent, LoadBrief } from "../lib/types";
-import { computeBrief, loadBriefResult, marginProtected, priceImpact, scoreCarrier, type Facility, type Shipment, type Vendor, type IntelSource } from "../lib/intel";
+import { computeBrief, loadBriefResult, dockRiskPriced, expectedChargeback, parseChargebackPct, riskAdjustedBuy, priceImpact, scoreCarrier, toFacility, type Facility, type Shipment, type Vendor, type IntelSource } from "../lib/intel";
 import { createTmsClient } from "../lib/tms";
 import { resetShipment } from "../scripts/reset";
 
@@ -28,12 +29,26 @@ const history: Shipment[] = [
 ];
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status });
 
-test("margin protected = dock costs priced in + overpay avoided vs lane history", () => {
+test("dock risk = expected detention + carrier's expected OTIF chargeback (lumper excluded: billed on sell)", () => {
   const b = computeBrief(shipment, facility, 18, history, vendors, null);
-  const dock = b.risk.expectedLumper$ + b.risk.expectedDetention$;
-  const hist = b.laneHistory.avgLinehaulPerMile! * b.lane.miles;
-  assert.equal(marginProtected(b, hist + 500), Math.round(dock * 100) / 100); // paid above history: only dock costs count
-  assert.equal(marginProtected(b, hist - 100), Math.round((dock + 100) * 100) / 100);
+  assert.equal(parseChargebackPct("OTIF program — chargeback 3% of PO value for arrivals after MABD"), 3);
+  assert.equal(parseChargebackPct(null), null);
+  assert.equal(expectedChargeback(93, 3, 50000), 105);
+  assert.equal(expectedChargeback(null, 3, 50000), null);
+  assert.equal(b.risk.poValueAssumed, true);
+  const c = b.carriers.find(x => x.expectedChargeback$ != null)!;
+  assert.equal(dockRiskPriced(b, c.vendorId), Math.round((b.risk.expectedDetention$ + c.expectedChargeback$!) * 100) / 100);
+  assert.equal(dockRiskPriced(b, null), b.risk.expectedDetention$);
+  assert.equal(riskAdjustedBuy(b, c.vendorId, 2000), 2000 + c.expectedChargeback$!);
+  const declared = computeBrief({ ...shipment, declared_value: 80000 }, facility, 18, history, vendors, null);
+  assert.equal(declared.risk.poValue$, 80000);
+  assert.equal(declared.risk.poValueAssumed, false);
+});
+
+test("facility adapter accepts null closed days and orders receiving hours", () => {
+  const mapped = toFacility({ facility_id: "dock", receiving_hours: { fri: { open: "06:00", close: "14:00" }, sun: null, mon: { open: "06:00", close: "14:00" } } });
+  assert.equal(mapped.receiving_hours, "mon/fri 06:00–14:00");
+  assert.equal(toFacility({ facility_id: "dock", receiving_hours: { sun: null } }).receiving_hours, null);
 });
 
 test("hero economics match the PRD and checked-in fixture", () => {
@@ -67,7 +82,7 @@ test("RUSTYRIG stays eligible with warning; BADWOLF and wrong equipment are excl
 });
 
 test("fixture selection is explicit and HTTP errors do not throw into tool callers", async () => {
-  assert.deepEqual(await loadBriefResult(hero.shipmentId, { fixture: true }), { ok: true, result: fixture });
+  assert.deepEqual(await loadBriefResult(hero.shipmentId, { fixture: true }), { ok: true, result: liveHero });
   assert.equal((await loadBriefResult("missing", { fixture: true })).ok, false);
   const client = createTmsClient({ baseUrl: "https://example.invalid", apiKey: "test-only", fetch: async () => json({ error: "EXPIRED", detail: "CARGO policy expired" }, 409), now: () => new Date("2026-11-13T19:00:00Z") });
   assert.deepEqual(await client.cover("hero", {}), { ok: false, status: 409, error: "EXPIRED", detail: { error: "EXPIRED", detail: "CARGO policy expired" } });

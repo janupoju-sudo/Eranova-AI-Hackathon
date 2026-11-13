@@ -7,7 +7,7 @@
 import { hasToolCall, isStepCount, streamText, type ModelMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
 import type { AgentEvent, Money } from "./types";
-import { marginProtected } from "./intel";
+import { dockRiskPriced } from "./intel";
 import { createTools, newRunState, type Autonomy, type RunState, type ToolDeps } from "./tools";
 
 const MAX_STEPS = 24;
@@ -17,9 +17,9 @@ export const SYSTEM_PROMPT = `You are the Coverage Agent for Meridian Logistics,
 Rules (non-negotiable):
 1. Call get_load_brief first. Reason only from its numbers. Never compute money yourself — sell, maxLinehaul, carrierFuel$, expectedLumper$, expectedDetention$ and history are pre-computed by code.
 2. Never offer above margin.maxLinehaul unless a human approved a higher amount. The system will reject it anyway.
-3. At docks with chargeback / OTIF programs, value reliability (on-time delivery %) over the cheapest rate. Carrier "warnings" are advisory; the TMS is the final authority on compliance.
+3. At docks with chargeback / OTIF programs, reliability has a dollar value: each carrier's expectedChargeback$ is pre-computed from its on-time delivery %. Compare carriers on riskAdjustedBuy (price + expectedChargeback), not on price alone and not on adjectives. Carrier "warnings" are advisory; the TMS is the final authority on compliance.
 4. On any tool error, read "detail", say in one sentence what happened, and adapt (e.g. a 409 on cover means that carrier cannot haul it — move to the next best carrier). Never retry the exact same failing call.
-5. Collect quotes before deciding: the top 3 eligible carriers by score AND the eligible budget carrier (complianceLight YELLOW), every run. Open below maxLinehaul; when a carrier counters above the ceiling, counter back AT maxLinehaul once, then move on (max 3 rounds per carrier; never repeat an offer). Then cover the CHEAPEST carrier that accepted at or below maxLinehaul — no approval needed. Don't pre-judge carrier warnings: the TMS decides compliance at cover. If cover fails, cover the next-cheapest accepted carrier; if none accepted, counter the remaining quoted carriers AT maxLinehaul first (if you have not yet). Only if no carrier accepted within the ceiling, call request_approval with the most reliable carrier's best price and a one-sentence reason, then stop and wait. When the floor is unreachable at historical rates, call escalate_to_sales at the end.
+5. Collect quotes before deciding: the top 3 eligible carriers by score AND the eligible budget carrier (complianceLight YELLOW), every run. Open below maxLinehaul; when a carrier counters above the ceiling, counter back AT maxLinehaul once, then move on (max 3 rounds per carrier; never repeat an offer). Then cover the CHEAPEST carrier that accepted at or below maxLinehaul — no approval needed. Don't pre-judge carrier warnings: the TMS decides compliance at cover. If cover fails, cover the next-cheapest accepted carrier; if none accepted, counter the remaining quoted carriers AT maxLinehaul first (if you have not yet). Only if no carrier accepted within the ceiling, call request_approval for the carrier with the LOWEST riskAdjustedBuy (its latest price + its expectedChargeback, both returned by negotiate) at exactly its latest price, with a one-sentence reason that cites those numbers, then stop and wait. The system rejects any other carrier or price. Never claim a carrier is "more reliable" unless its on-time % is actually higher. When the floor is unreachable at historical rates, call escalate_to_sales at the end.
 6. After covering: add_cost FSC, add_cost LUM, generate_rate_con, request_appointment for the delivery stop (inside the delivery window, not early, on or before MABD — prefer a morning window inside receiving hours), then add_note. The system writes the facts (carrier, price vs ceiling, buy breakdown, GP, errors recovered, appointment) — you give only a one-sentence "why" for the carrier choice. escalate_to_sales works the same way: one sentence of context; the numbers are filled in by code.
 7. Autonomy is set in the first message. In "supervised" mode, call request_approval before EVERY cover (even within the ceiling) with the carrier and its accepted price, then stop and wait.
 8. Never ask for, store or handle facility portal credentials. A human books the portal appointment.
@@ -75,6 +75,7 @@ export async function resumeRun(
   }
   const pending = run.state.approvalPending;
   run.state.approvalPending = null;
+  run.state.approvalDecision = { carrierId: pending.carrierId, decision };
   const offer = Number(pending.numbers.offer);
   let text: string;
   if (decision === "approved") {
@@ -158,5 +159,5 @@ function summarize(s: RunState): string {
 }
 
 function protectedDollars(s: RunState): Money | undefined {
-  return s.brief && s.coveredBy ? marginProtected(s.brief, s.coveredBy.amount) : undefined;
+  return s.brief && s.coveredBy ? dockRiskPriced(s.brief, s.coveredBy.carrierId) : undefined;
 }

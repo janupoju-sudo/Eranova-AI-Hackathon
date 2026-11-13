@@ -40,127 +40,260 @@
     "id": "BBR-DC135",
     "avgUnloadMin": 150,
     "graceMin": 30,
-    "lumperPolicy": "REQUIRED",
+    "lumperPolicy": "REQUIRED (driver assist LUMPER)",
     "lumperFeeRange": [
       150,
       300
     ],
     "leadTimeHours": 48,
-    "mabdProgramNote": "OTIF chargeback: 3% of PO value for late arrival; early delivery also non-compliant",
-    "receivingHours": "Mon?Fri 06:00?14:00 America/Chicago",
+    "mabdProgramNote": "OTIF program â€” chargeback 3% of PO value for arrivals after MABD; early delivery also non-compliant.",
+    "receivingHours": "mon/tue/wed/thu/fri 06:00?14:00",
     "complianceFlags": [
-      "seal required",
-      "photo ID required",
-      "CHEP pallets"
+      "SEAL_REQUIRED",
+      "ID_REQUIRED",
+      "CHEP pallets",
+      "Reschedules < 24h before slot forfeit the slot; rebook via portal only."
     ],
     "notes": [
-      "2026-11-04: Door 17-22 under repair; expect 30-45 min extra dwell",
-      "Appointments via portal only; reschedule under 24 hours forfeits slot; 06:00?08:00 slots go 3+ days out"
+      "2026-03-18: Portal slots for 06:00-08:00 go 3+ days out â€” book early in the week.",
+      "2026-07-16: Driver turned away 05/2026 for missing seal â€” gate enforces SEAL_REQUIRED hard.",
+      "2026-10-09: Lumper receipts now itemized per trailer â€” collect the itemized copy before the driver leaves.",
+      "2026-11-04: Door 17-22 under repair; expect 30-45 min extra dwell at busy slots."
     ]
   },
   "risk": {
     "expectedDwellH": 3.1,
     "expectedDetentionH": 1.1,
     "expectedDetention$": 82.5,
-    "expectedLumper$": 262.5
+    "expectedLumper$": 241.25,
+    "chargebackPct": 3,
+    "poValue$": 50000,
+    "poValueAssumed": true
   },
   "laneHistory": {
-    "loads": 2,
-    "avgLinehaulPerMile": 2.47,
-    "avgLumper$": 262.5,
-    "avgGpPct": 12.7
+    "loads": 8,
+    "avgLinehaulPerMile": 2.29,
+    "avgLumper$": 241.25,
+    "avgGpPct": 14.76
   },
-  "market": null,
+  "market": {
+    "low": 2076.17,
+    "target": 2270,
+    "high": 2444.42,
+    "rateId": "RE-20261117-a4695e"
+  },
   "margin": {
     "floorPct": 18,
     "maxBuyTotal": 2852.78,
     "carrierFuel$": 527.25,
-    "maxLinehaul": 2063.03,
+    "maxLinehaul": 2084.28,
     "floorReachableAtHistory": false
   },
   "carriers": [
     {
       "vendorId": "LAKESHORE",
-      "name": "LAKESHORE",
+      "name": "Lakeshore Carriers Inc.",
       "equipment": [
         "V"
       ],
       "status": "ACTIVE",
-      "cargoExpires": "2027-09-30",
+      "cargoExpires": "2027-08-15",
       "complianceLight": "GREEN",
-      "onTimePickupPct": 98,
-      "onTimeDeliveryPct": 99,
+      "onTimePickupPct": 94,
+      "onTimeDeliveryPct": 93,
       "claims": 0,
-      "loads": 250,
-      "score": 74.0,
+      "loads": 188,
+      "score": 69.16,
       "warnings": [],
-      "eligible": true
+      "eligible": true,
+      "expectedChargeback$": 105
+    },
+    {
+      "vendorId": "PRAIRIEHL",
+      "name": "Prairie Haul Lines",
+      "equipment": [
+        "V"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2027-06-11",
+      "complianceLight": "GREEN",
+      "onTimePickupPct": 93,
+      "onTimeDeliveryPct": 92,
+      "claims": 0,
+      "loads": 203,
+      "score": 68.76,
+      "warnings": [],
+      "eligible": true,
+      "expectedChargeback$": 120
+    },
+    {
+      "vendorId": "GULFSTRMX",
+      "name": "Gulfstream Express Carriers",
+      "equipment": [
+        "R",
+        "V"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2027-04-22",
+      "complianceLight": "GREEN",
+      "onTimePickupPct": 92,
+      "onTimeDeliveryPct": 93,
+      "claims": 0,
+      "loads": 176,
+      "score": 68.32,
+      "warnings": [],
+      "eligible": true,
+      "expectedChargeback$": 105
+    },
+    {
+      "vendorId": "CANYONFRT",
+      "name": "Canyon Freight Systems",
+      "equipment": [
+        "V",
+        "R"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2027-04-12",
+      "complianceLight": "GREEN",
+      "onTimePickupPct": 92,
+      "onTimeDeliveryPct": 91,
+      "claims": 0,
+      "loads": 121,
+      "score": 66.42,
+      "warnings": [],
+      "eligible": true,
+      "expectedChargeback$": 135
+    },
+    {
+      "vendorId": "ACMECARR",
+      "name": "Acme Carrier Inc.",
+      "equipment": [
+        "V",
+        "HS",
+        "SB"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2027-05-12",
+      "complianceLight": "GREEN",
+      "onTimePickupPct": 95,
+      "onTimeDeliveryPct": 94,
+      "claims": 1,
+      "loads": 412,
+      "score": 66.1,
+      "warnings": [],
+      "eligible": true,
+      "expectedChargeback$": 90
+    },
+    {
+      "vendorId": "SUNRIDGE",
+      "name": "Sunridge Trucking LLC",
+      "equipment": [
+        "V",
+        "R"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2026-11-25",
+      "complianceLight": "GREEN",
+      "onTimePickupPct": 91,
+      "onTimeDeliveryPct": 90,
+      "claims": 0,
+      "loads": 134,
+      "score": 65.98,
+      "warnings": [],
+      "eligible": true,
+      "expectedChargeback$": 150
+    },
+    {
+      "vendorId": "BLUERIDGE",
+      "name": "Blue Ridge Transport",
+      "equipment": [
+        "V"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2027-07-11",
+      "complianceLight": "GREEN",
+      "onTimePickupPct": 90,
+      "onTimeDeliveryPct": 89,
+      "claims": 0,
+      "loads": 157,
+      "score": 65.74,
+      "warnings": [],
+      "eligible": true,
+      "expectedChargeback$": 165
+    },
+    {
+      "vendorId": "HIGHPLAIN",
+      "name": "High Plains Freightways",
+      "equipment": [
+        "F",
+        "SD"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2027-05-22",
+      "complianceLight": "RED",
+      "onTimePickupPct": 89,
+      "onTimeDeliveryPct": 88,
+      "claims": 0,
+      "loads": 96,
+      "score": 63.82,
+      "warnings": [
+        "DO NOT USE or incompatible equipment"
+      ],
+      "eligible": false,
+      "expectedChargeback$": 180
     },
     {
       "vendorId": "RUSTYRIG",
-      "name": "RUSTYRIG",
+      "name": "Rusty Rig Transport Co.",
       "equipment": [
-        "V"
+        "V",
+        "F"
       ],
       "status": "ACTIVE",
       "cargoExpires": "2026-09-29",
       "complianceLight": "YELLOW",
-      "onTimePickupPct": 98,
-      "onTimeDeliveryPct": 98,
-      "claims": 0,
-      "loads": 200,
-      "score": 72.6,
+      "onTimePickupPct": 87,
+      "onTimeDeliveryPct": 84,
+      "claims": 1,
+      "loads": 88,
+      "score": 56.46,
       "warnings": [
         "cargo insurance expired 2026-09-29"
       ],
-      "eligible": true
-    },
-    {
-      "vendorId": "CANYONFRT",
-      "name": "CANYONFRT",
-      "equipment": [
-        "V"
-      ],
-      "status": "ACTIVE",
-      "cargoExpires": "2027-08-31",
-      "complianceLight": "GREEN",
-      "onTimePickupPct": 97,
-      "onTimeDeliveryPct": 98,
-      "claims": 0,
-      "loads": 150,
-      "score": 71.3,
-      "warnings": [],
-      "eligible": true
+      "eligible": true,
+      "expectedChargeback$": 240
     },
     {
       "vendorId": "BADWOLF",
-      "name": "BADWOLF",
+      "name": "Bad Wolf Logistics LLC",
       "equipment": [
         "V"
       ],
       "status": "DO_NOT_USE",
-      "cargoExpires": "2027-01-01",
+      "cargoExpires": "2027-03-13",
       "complianceLight": "RED",
-      "onTimePickupPct": 95,
-      "onTimeDeliveryPct": 95,
+      "onTimePickupPct": 71,
+      "onTimeDeliveryPct": 68,
       "claims": 2,
-      "loads": 100,
-      "score": 58.5,
+      "loads": 37,
+      "score": 39.24,
       "warnings": [
         "carrier status: DO_NOT_USE",
         "DO NOT USE or incompatible equipment"
       ],
-      "eligible": false
+      "eligible": false,
+      "expectedChargeback$": 480
     }
   ],
   "flags": [
     "margin floor unreachable at historical rates",
-    "lumper policy: REQUIRED",
+    "lumper policy: REQUIRED (driver assist LUMPER)",
     "appointment lead time: 48 hours",
-    "OTIF chargeback: 3% of PO value for late arrival; early delivery also non-compliant",
-    "seal required",
-    "photo ID required",
+    "OTIF program â€” chargeback 3% of PO value for arrivals after MABD; early delivery also non-compliant.",
+    "SEAL_REQUIRED",
+    "ID_REQUIRED",
     "CHEP pallets",
+    "Reschedules < 24h before slot forfeit the slot; rebook via portal only.",
     "portal credentials: never store"
   ]
 }

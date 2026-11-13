@@ -20,6 +20,8 @@ export default function ApprovalPanel({ approval, onApprove, onReject }: { appro
             {n.maxLinehaul != null && <Stat k="Ceiling" v={usd(Number(n.maxLinehaul))} />}
             {n.overCeiling != null && (Number(n.overCeiling) > 0 ? <Stat k="Over by" v={usd(Number(n.overCeiling))} bad /> : <Stat k="Under ceiling" v={usd(-Number(n.overCeiling))} />)}
             {n.resultingGpPct != null && <Stat k="Resulting GP" v={`${n.resultingGpPct}%`} bad />}
+            {n.expectedChargeback != null && <Stat k="OTIF risk" v={usd(Number(n.expectedChargeback))} />}
+            {n.riskAdjustedBuy != null && <Stat k="Risk-adj. linehaul" v={usd(Number(n.riskAdjustedBuy))} />}
           </div>
         </div>
         <div className="mt-4 flex justify-end gap-3">
