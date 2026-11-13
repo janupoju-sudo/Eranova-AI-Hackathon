@@ -3,7 +3,7 @@ import { test } from "node:test";
 import hero from "./loadBrief.hero.json";
 import events from "./events.sample.json";
 import type { AgentEvent, LoadBrief } from "../lib/types";
-import { computeBrief, loadBriefResult, priceImpact, scoreCarrier, type Facility, type Shipment, type Vendor, type IntelSource } from "../lib/intel";
+import { computeBrief, loadBriefResult, marginProtected, priceImpact, scoreCarrier, type Facility, type Shipment, type Vendor, type IntelSource } from "../lib/intel";
 import { createTmsClient } from "../lib/tms";
 import { resetShipment } from "../scripts/reset";
 
@@ -27,6 +27,14 @@ const history: Shipment[] = [
   { ...shipment, id: "7300115", status: "POD_RECEIVED", gp_pct: 13.3, costs: [{ id: "3", charge_code: "FRT", amount: 2303.25, status: "CONFIRMED" }, { id: "4", charge_code: "LUM", amount: 235, status: "CONFIRMED" }] },
 ];
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status });
+
+test("margin protected = dock costs priced in + overpay avoided vs lane history", () => {
+  const b = computeBrief(shipment, facility, 18, history, vendors, null);
+  const dock = b.risk.expectedLumper$ + b.risk.expectedDetention$;
+  const hist = b.laneHistory.avgLinehaulPerMile! * b.lane.miles;
+  assert.equal(marginProtected(b, hist + 500), Math.round(dock * 100) / 100); // paid above history: only dock costs count
+  assert.equal(marginProtected(b, hist - 100), Math.round((dock + 100) * 100) / 100);
+});
 
 test("hero economics match the PRD and checked-in fixture", () => {
   const computed = computeBrief(shipment, facility, 18, history, vendors, null);

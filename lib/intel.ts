@@ -194,6 +194,16 @@ export async function loadBrief(shipmentId: string, options: { fixture?: boolean
   return response.result;
 }
 
+/**
+ * Header counter ("margin protected"): dock costs priced into the buy that a truck-only rep would have missed
+ * (expected lumper + expected detention), plus overpay avoided vs the lane's historical linehaul.
+ */
+export function marginProtected(brief: LoadBrief, linehaul: number): number {
+  const dock = brief.risk.expectedLumper$ + brief.risk.expectedDetention$;
+  const hist = brief.laneHistory.avgLinehaulPerMile != null ? brief.laneHistory.avgLinehaulPerMile * brief.lane.miles : null;
+  return money(dock + (hist != null ? Math.max(0, hist - linehaul) : 0));
+}
+
 /** All proposed-price arithmetic belongs here, including the human approval panel. */
 export function priceImpact(brief: LoadBrief, linehaul: number) {
   if (!finite(linehaul) || linehaul < 0) throw new Error("Linehaul must be a nonnegative finite amount");

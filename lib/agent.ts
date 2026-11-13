@@ -7,6 +7,7 @@
 import { hasToolCall, isStepCount, streamText, type ModelMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
 import type { AgentEvent, Money } from "./types";
+import { marginProtected } from "./intel";
 import { createTools, newRunState, type Autonomy, type RunState, type ToolDeps } from "./tools";
 
 const MAX_STEPS = 24;
@@ -153,16 +154,6 @@ function summarize(s: RunState): string {
   return `Shipment ${s.shipmentId} not covered.`;
 }
 
-/**
- * Header counter: dock costs priced into the buy that a truck-only rep would have missed
- * (lumper + expected detention), plus overpay avoided vs the lane's historical linehaul.
- * TODO(Akshaya): move into lib/intel.ts if you'd rather own this number.
- */
 function protectedDollars(s: RunState): Money | undefined {
-  const b = s.brief;
-  if (!b || !s.coveredBy) return undefined;
-  const dock = b.risk.expectedLumper$ + b.risk.expectedDetention$;
-  const hist = b.laneHistory.avgLinehaulPerMile != null ? b.laneHistory.avgLinehaulPerMile * b.lane.miles : null;
-  const avoided = hist != null ? Math.max(0, hist - s.coveredBy.amount) : 0;
-  return Math.round((dock + avoided) * 100) / 100;
+  return s.brief && s.coveredBy ? marginProtected(s.brief, s.coveredBy.amount) : undefined;
 }
