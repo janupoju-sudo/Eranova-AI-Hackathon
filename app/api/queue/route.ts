@@ -1,4 +1,4 @@
-// GET /api/queue → BOOKED loads for the sidebar (one page, max 50 — no uncapped loops).
+// GET /api/queue → BOOKED loads for the sidebar (lib/tms caps pagination).
 import { tms } from "../_lib/deps";
 
 export interface QueueItem {
@@ -12,9 +12,9 @@ export interface QueueItem {
 }
 
 export async function GET() {
-  const r = await tms.listShipments({ status: "BOOKED", limit: "50" });
+  const r = await tms.listShipments<Record<string, unknown>>({ status: "BOOKED", limit: 50 });
   if (!r.ok) return Response.json(r, { status: r.status || 502 });
-  const items = ((r.data as { items?: Record<string, unknown>[] }).items ?? []).map(
+  const items = r.result.slice(0, 50).map(
     (s): QueueItem => ({
       shipmentId: String(s.shipment_id),
       customerId: String(s.customer_id),

@@ -10,12 +10,10 @@
 import { tool } from "ai";
 import { z } from "zod";
 import type { AgentEvent, LoadBrief, Money } from "./types";
+import type { TmsResult } from "./tms";
+import { priceImpact } from "./intel";
 
 // ---------- Dependency contract (implemented by lib/tms.ts, lib/intel.ts, lib/carrierSim.ts) ----------
-
-export type TmsResult<T = unknown> =
-  | { ok: true; data: T }
-  | { ok: false; status: number; error: string; detail: string };
 
 export interface CarrierReply {
   accept: boolean;
@@ -31,16 +29,16 @@ export interface NegotiationTurn {
 }
 
 export interface ToolDeps {
-  loadBrief(shipmentId: string): Promise<LoadBrief>;
+  loadBrief(shipmentId: string): Promise<TmsResult<LoadBrief>>;
   carrier: {
     respond(carrierId: string, offer: Money, history: NegotiationTurn[], brief: LoadBrief): Promise<CarrierReply>;
   };
   tms: {
-    cover(id: string, body: Record<string, unknown>): Promise<TmsResult>;
-    addCost(id: string, body: Record<string, unknown>): Promise<TmsResult>;
-    generateRateCon(id: string): Promise<TmsResult>;
-    setAppointment(id: string, stopSeq: number, body: Record<string, unknown>): Promise<TmsResult>;
-    addShipmentNote(id: string, body: Record<string, unknown>): Promise<TmsResult>;
+    cover(id: string, body: unknown): Promise<TmsResult<unknown>>;
+    addCost(id: string, body: unknown): Promise<TmsResult<unknown>>;
+    generateRateCon(id: string): Promise<TmsResult<unknown>>;
+    setAppointment(id: string, stopSeq: number, body: unknown): Promise<TmsResult<unknown>>;
+    addShipmentNote(id: string, text: string): Promise<TmsResult<unknown>>;
   };
 }
 
@@ -103,9 +101,12 @@ function fail(error: string, detail: string): ToolOut {
   return { ok: false, error, detail };
 }
 
-function fromTms(r: TmsResult, summarize?: (data: unknown) => unknown): ToolOut {
-  if (r.ok) return { ok: true, result: summarize ? summarize(r.data) : r.data };
-  return { ok: false, error: `${r.status} ${r.error}`, detail: r.detail };
+function fromTms(r: TmsResult<unknown>, summarize?: (data: unknown) => unknown): ToolOut {
+  if (r.ok) return { ok: true, result: summarize ? summarize(r.result) : r.result };
+  // lib/tms puts the whole error body in detail; the TMS's own sentence is detail.detail.
+  const d = r.detail as { detail?: unknown } | string | null;
+  const detail = typeof d === "string" ? d : typeof d?.detail === "string" ? d.detail : JSON.stringify(d);
+  return { ok: false, error: `${r.status} ${r.error}`, detail };
 }
 
 /** Keep TMS shipment payloads small for the model's context. */
@@ -159,9 +160,9 @@ export function createTools(ctx: ToolContext) {
         if (shipment_id !== state.shipmentId) {
           return fail("wrong_shipment", `This run is for shipment ${state.shipmentId}.`);
         }
-        const brief = await deps.loadBrief(shipment_id);
-        state.brief = brief;
-        return { ok: true, result: brief };
+        const r = await deps.loadBrief(shipment_id);
+        if (r.ok) state.brief = r.result;
+        return fromTms(r);
       }),
     }),
 
@@ -261,8 +262,9 @@ export function createTools(ctx: ToolContext) {
         }
         const r = await deps.tms.cover(shipment_id, body);
         if (!r.ok) {
-          if (r.status === 409 || r.status === 404) state.failedCarriers[carrier_id] = r.detail;
-          return fromTms(r);
+          const out = fromTms(r);
+          if (!out.ok && (r.status === 409 || r.status === 404)) state.failedCarriers[carrier_id] = out.detail;
+          return out;
         }
         state.coveredBy = deal;
         return fromTms(r, shipmentSummary);
@@ -289,14 +291,14 @@ export function createTools(ctx: ToolContext) {
                 charge_code: "FSC",
                 amount: brief.margin.carrierFuel$,
                 status: "CONFIRMED",
-                description: description ?? `Carrier fuel surcharge (${brief.lane.miles} mi)`,
+                description: `[coverage-agent] ${description ?? `Carrier fuel surcharge (${brief.lane.miles} mi)`}`,
               }
             : {
                 vendor_id: "DOCKHANDS",
                 charge_code: "LUM",
                 amount: brief.risk.expectedLumper$,
                 status: "ESTIMATED",
-                description: description ?? `Expected lumper at ${brief.facility.id} (lane history / facility range)`,
+                description: `[coverage-agent] ${description ?? `Expected lumper at ${brief.facility.id} (lane history / facility range)`}`,
               };
         if (!ctx.writesEnabled) return dryRun("add_cost", body);
         return fromTms(await deps.tms.addCost(shipment_id, body), shipmentSummary);
@@ -350,7 +352,7 @@ export function createTools(ctx: ToolContext) {
         if (shipment_id !== state.shipmentId) return fail("wrong_shipment", `This run is for shipment ${state.shipmentId}.`);
         const note = `[Coverage Agent] ${text}`;
         if (!ctx.writesEnabled) return dryRun("add_note", { note });
-        return fromTms(await deps.tms.addShipmentNote(shipment_id, { note, visibility: "INTERNAL" }), (d) => {
+        return fromTms(await deps.tms.addShipmentNote(shipment_id, note), (d) => {
           const ev = (d ?? {}) as Record<string, unknown>;
           return { event_id: ev.event_id ?? ev.id, saved: true };
         });
@@ -369,18 +371,16 @@ export function createTools(ctx: ToolContext) {
         const brief = requireBrief();
         if (!brief) return NO_BRIEF;
         offer = round2(offer);
-        const sell = brief.sell.total;
-        const buyTotal = round2(offer + brief.margin.carrierFuel$ + brief.risk.expectedLumper$);
-        const gpPct = sell > 0 ? round2(((sell - buyTotal) / sell) * 100) : 0;
+        const p = priceImpact(brief, offer);
         const numbers: Record<string, Money | number> = {
           offer,
           maxLinehaul: brief.margin.maxLinehaul,
-          overCeiling: round2(offer - brief.margin.maxLinehaul),
-          sell,
-          buyTotal,
-          resultingGpPct: gpPct,
+          sell: brief.sell.total,
+          buyTotal: p.totalBuy,
+          resultingGpPct: p.gpPct,
+          gpWithDetentionPct: p.gpWithDetentionPct,
           floorPct: brief.margin.floorPct,
-          expectedDetention: brief.risk.expectedDetention$,
+          recommendedSell: p.recommendedSell,
         };
         const fullReason = `${carrier_id}: ${reason}`;
         state.approvalPending = { carrierId: carrier_id, reason: fullReason, numbers };
@@ -397,7 +397,7 @@ export function createTools(ctx: ToolContext) {
         state.escalation = text;
         const note = `[Coverage Agent → Sales] Lane repricing recommendation: ${text}`;
         if (!ctx.writesEnabled) return dryRun("escalate_to_sales", { note });
-        const r = await deps.tms.addShipmentNote(shipment_id, { note, visibility: "INTERNAL" });
+        const r = await deps.tms.addShipmentNote(shipment_id, note);
         return r.ok ? { ok: true, result: { escalated: true, savedAsNote: true } } : fromTms(r);
       }),
     }),
