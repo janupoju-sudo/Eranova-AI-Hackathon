@@ -13,7 +13,7 @@ function Row({ k, v, strong, tone }: { k: string; v: string; strong?: boolean; t
 function MarginMeter({ gp, floor }: { gp: number | null; floor: number }) {
   const max = 25;
   const pos = (n: number) => `${Math.min(Math.max(n / max, 0), 1) * 100}%`;
-  const ok = gp != null && gp >= floor;
+  const ok = gp != null && Number(gp.toFixed(1)) >= floor; // compare at displayed precision
   return (
     <div>
       <div className="mb-2 flex items-end justify-between">
