@@ -128,7 +128,7 @@ export const preApproval: AgentEvent[] = [
     type: "approval_needed", runId: "run-7300176",
     reason: "Best available linehaul is above the margin ceiling. Floor unreachable on this lane.",
     numbers: {
-      offer: LINEHAUL, maxLinehaul: 2063, overBy: LINEHAUL - 2063, gpPct: Number(gp(LINEHAUL).toFixed(1)),
+      offer: LINEHAUL, maxLinehaul: 2063, overCeiling: LINEHAUL - 2063, resultingGpPct: Number(gp(LINEHAUL).toFixed(1)),
       floorPct: 18, expectedDetention: 82.5, openingAsk: neg.openingAsk,
     },
   },

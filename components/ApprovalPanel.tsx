@@ -18,8 +18,8 @@ export default function ApprovalPanel({ approval, onApprove, onReject }: { appro
           <div className="flex shrink-0 gap-6 text-right">
             <Stat k="Offer" v={usd(Number(n.offer))} />
             <Stat k="Ceiling" v={usd(Number(n.maxLinehaul))} />
-            <Stat k="Over by" v={usd(Number(n.overBy))} bad />
-            <Stat k="Resulting GP" v={`${n.gpPct}%`} bad />
+            <Stat k="Over by" v={usd(Number(n.overCeiling))} bad />
+            <Stat k="Resulting GP" v={`${n.resultingGpPct}%`} bad />
           </div>
         </div>
         <div className="mt-4 flex justify-end gap-3">
