@@ -2,7 +2,7 @@ import hero from "../fixtures/loadBrief.hero.json";
 import type { CarrierCandidate, LoadBrief } from "./types";
 import { tms, type TmsResult } from "./tms";
 
-// Wire schema assumed from the PRD. Validate against Meridian OpenAPI before live use.
+// Normalized internal records; liveSource adapts the documented Meridian wire schema.
 export interface Shipment {
   id: string; customer_id: string; status: string; mode: string; equipment: string;
   origin: { city: string; state: string }; destination: { city: string; state: string };
@@ -53,11 +53,13 @@ const toShipment = (s: Raw): Shipment => {
 };
 const toHours = (h: Raw | undefined) => {
   if (!h) return null;
-  const spans = Object.entries(h).map(([d, v]: [string, Raw]) => `${d} ${v.open}–${v.close}`);
-  const same = new Set(Object.values(h).map((v: Raw) => `${v.open}–${v.close}`));
-  return same.size === 1 ? `${Object.keys(h).join("/")} ${[...same][0]}` : spans.join(", ");
+  const days = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"].filter(day => h[day] != null);
+  if (!days.length) return null;
+  const spans = days.map(day => `${day} ${h[day].open}–${h[day].close}`);
+  const same = new Set(days.map(day => `${h[day].open}–${h[day].close}`));
+  return same.size === 1 ? `${days.join("/")} ${[...same][0]}` : spans.join(", ");
 };
-const toFacility = (f: Raw): Facility => ({
+export const toFacility = (f: Raw): Facility => ({
   id: f.facility_id, avg_unload_min: f.avg_unload_minutes ?? null, grace_min: f.appointment_grace_minutes ?? null,
   lumper_policy: f.lumper_policy ? `${f.lumper_policy}${f.driver_assist ? ` (driver assist ${f.driver_assist})` : ""}` : null,
   lumper_fee_range: f.lumper_fee_min != null && f.lumper_fee_max != null ? [f.lumper_fee_min, f.lumper_fee_max] : null,
