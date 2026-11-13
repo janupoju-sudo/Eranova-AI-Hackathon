@@ -78,7 +78,7 @@ export default function Page() {
           <Economics brief={brief} offer={offer} events={events} preview={preview} />
           <Feed events={events} error={error} busy={status === "running"} />
         </div>
-        {status === "awaiting" && approval && <ApprovalPanel approval={approval} onApprove={run.approve} onReject={run.reject} />}
+        {status === "awaiting" && approval && <ApprovalPanel approval={approval} onApprove={run.approve} onReject={run.reject} onSearch={mode === "live" ? live.searchMore : undefined} />}
       </div>
     </Providers>
   );

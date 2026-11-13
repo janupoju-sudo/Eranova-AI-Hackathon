@@ -5,7 +5,7 @@ import { usd } from "./format";
 
 type Approval = Extract<AgentEvent, { type: "approval_needed" }>;
 
-export default function ApprovalPanel({ approval, onApprove, onReject }: { approval: Approval; onApprove: () => void; onReject: () => void }) {
+export default function ApprovalPanel({ approval, onApprove, onReject, onSearch }: { approval: Approval; onApprove: () => void; onReject: () => void; onSearch?: () => void }) {
   const n = approval.numbers;
   return (
     <div className="border-t border-amber-400/40 bg-[#1a1608] px-6 py-4">
@@ -26,6 +26,9 @@ export default function ApprovalPanel({ approval, onApprove, onReject }: { appro
         </div>
         <div className="mt-4 flex justify-end gap-3">
           <button onClick={onReject} className="rounded-lg border border-white/20 px-5 py-2 text-sm text-slate-200 transition active:scale-[0.97] motion-reduce:active:scale-100 hover:bg-white/10">Reject · escalate to sales</button>
+          {onSearch && (
+            <button onClick={onSearch} className="rounded-lg border border-sky-400/40 px-5 py-2 text-sm text-sky-100 transition active:scale-[0.97] motion-reduce:active:scale-100 hover:bg-sky-400/10">Look for another carrier</button>
+          )}
           <button onClick={onApprove} className="rounded-lg bg-amber-400 px-5 py-2 text-sm font-semibold text-slate-950 transition active:scale-[0.97] motion-reduce:active:scale-100 hover:bg-amber-300">Approve and cover</button>
         </div>
       </div>

@@ -8,8 +8,8 @@ export const maxDuration = 300;
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { runId?: string; decision?: string; note?: string };
   const { runId, decision, note } = body;
-  if (!runId || (decision !== "approved" && decision !== "rejected")) {
-    return Response.json({ error: "bad_request", detail: 'Send { runId, decision: "approved" | "rejected" }.' }, { status: 400 });
+  if (!runId || (decision !== "approved" && decision !== "rejected" && decision !== "search")) {
+    return Response.json({ error: "bad_request", detail: 'Send { runId, decision: "approved" | "rejected" | "search" }.' }, { status: 400 });
   }
   const run = runs.get(runId);
   if (!run) return Response.json({ error: "not_found", detail: `Unknown run ${runId} (server restarted?).` }, { status: 404 });

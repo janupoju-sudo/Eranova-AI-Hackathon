@@ -167,6 +167,9 @@ export default function Feed({ events, error, busy }: { events: AgentEvent[]; er
           const k = `${i}-${e.type}`;
           switch (e.type) {
             case "thought":
+              if (e.text.startsWith("🔎")) {
+                return <p key={k} className="animate-[fadein_.35s_ease-out] rounded-lg bg-sky-400/10 px-3 py-2 text-sm font-medium text-sky-100">{e.text.replace(/^🔎\s*/u, "")}</p>;
+              }
               if (/^[✅⛔]/u.test(e.text)) {
                 const ok = e.text.startsWith("✅");
                 return (
