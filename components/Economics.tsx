@@ -7,8 +7,8 @@ const TMS_UI = process.env.NEXT_PUBLIC_TMS_UI_URL?.replace(/\/$/, "");
 function Row({ k, v, strong, tone }: { k: string; v: string; strong?: boolean; tone?: "bad" | "ok" }) {
   return (
     <div className="flex justify-between py-1.5 text-sm">
-      <span className="text-slate-400">{k}</span>
-      <span className={`font-mono tabular-nums ${strong ? "font-semibold" : ""} ${tone === "bad" ? "text-rose-300" : tone === "ok" ? "text-emerald-300" : "text-slate-100"}`}>{v}</span>
+      <span className="text-stone-500">{k}</span>
+      <span className={`font-mono tabular-nums ${strong ? "font-semibold" : ""} ${tone === "bad" ? "text-rose-700" : tone === "ok" ? "text-emerald-700" : "text-stone-900"}`}>{v}</span>
     </div>
   );
 }
@@ -21,9 +21,9 @@ function DollarBar({ brief, offer }: { brief: LoadBrief; offer: number | null })
   const sell = brief.sell.total;
   const linehaul = offer ?? brief.margin.maxLinehaul;
   const parts = [
-    { k: "Linehaul", v: linehaul, c: offer == null ? "bg-slate-500/40 bg-[repeating-linear-gradient(135deg,transparent_0_6px,rgba(255,255,255,.08)_6px_12px)]" : "bg-sky-400" },
-    { k: "Carrier fuel", v: brief.margin.carrierFuel$, c: "bg-sky-300/70" },
-    { k: "Lumper at dock", v: brief.risk.expectedLumper$, c: "bg-violet-400" },
+    { k: "Linehaul", v: linehaul, c: offer == null ? "bg-stone-300 bg-[repeating-linear-gradient(135deg,transparent_0_6px,rgba(0,0,0,.10)_6px_12px)]" : "bg-indigo-600" },
+    { k: "Carrier fuel", v: brief.margin.carrierFuel$, c: "bg-indigo-300" },
+    { k: "Lumper at dock", v: brief.risk.expectedLumper$, c: "bg-orange-400" },
   ];
   const paid = parts.reduce((t, p) => t + p.v, 0);
   const keep = Math.max(0, sell - paid);
@@ -35,37 +35,37 @@ function DollarBar({ brief, offer }: { brief: LoadBrief; offer: number | null })
     <div>
       <div className="flex items-end justify-between gap-4">
         <div>
-          <p className="text-sm text-slate-400">{offer == null ? "At the ceiling we could pay" : "At the current offer we keep"}</p>
-          <p className={`font-mono text-5xl font-semibold tabular-nums leading-none transition-colors duration-500 ${offer == null ? "text-slate-300" : ok ? "text-emerald-300" : "text-rose-300"}`}>
+          <p className="text-sm text-stone-500">{offer == null ? "At the ceiling we could pay" : "At the current offer we keep"}</p>
+          <p className={`font-mono text-5xl font-semibold tabular-nums leading-none transition-colors duration-500 ${offer == null ? "text-stone-700" : ok ? "text-emerald-700" : "text-rose-700"}`}>
             {gp.toFixed(1)}%
           </p>
         </div>
         <div className="text-right text-sm">
-          <p className="text-slate-400">Margin floor</p>
-          <p className="font-mono text-2xl tabular-nums text-white">{brief.margin.floorPct}%</p>
+          <p className="text-stone-500">Margin floor</p>
+          <p className="font-mono text-2xl tabular-nums text-stone-900">{brief.margin.floorPct}%</p>
         </div>
       </div>
 
       <div className="relative mt-5">
-        <div className="flex h-12 overflow-hidden rounded-lg ring-1 ring-white/10" role="img"
+        <div className="flex h-12 overflow-hidden rounded-lg ring-1 ring-stone-200" role="img"
           aria-label={`Sell ${usd(sell)}: linehaul ${usd(linehaul)}, fuel ${usd(brief.margin.carrierFuel$)}, lumper ${usd(brief.risk.expectedLumper$)}, kept ${usd(keep)}`}>
           {parts.map((p) => <div key={p.k} className={`${p.c} transition-[width] duration-700 ease-out`} style={{ width: pct(p.v) }} />)}
-          <div className={`flex-1 transition-colors duration-500 ${ok || offer == null ? "bg-emerald-400/80" : "bg-rose-500/80"}`} />
+          <div className={`flex-1 transition-colors duration-500 ${ok || offer == null ? "bg-emerald-500" : "bg-rose-500"}`} />
         </div>
         {/* floor tick */}
-        <div className="pointer-events-none absolute -inset-y-2 w-0.5 bg-white" style={{ left: floorAt }} />
-        <div className="absolute -top-6 -translate-x-1/2 whitespace-nowrap text-xs text-white" style={{ left: floorAt }}>pay up to {usd(brief.margin.maxBuyTotal)}</div>
+        <div className="pointer-events-none absolute -inset-y-2 w-0.5 bg-stone-900" style={{ left: floorAt }} />
+        <div className="absolute -top-6 -translate-x-1/2 whitespace-nowrap text-xs text-stone-900" style={{ left: floorAt }}>pay up to {usd(brief.margin.maxBuyTotal)}</div>
       </div>
 
       <div className="mt-3 grid grid-cols-4 gap-2 text-xs">
-        {[...parts.map((p) => ({ k: p.k, v: p.v, c: p.c })), { k: "We keep", v: keep, c: ok || offer == null ? "bg-emerald-400/80" : "bg-rose-500/80" }].map((p) => (
+        {[...parts.map((p) => ({ k: p.k, v: p.v, c: p.c })), { k: "We keep", v: keep, c: ok || offer == null ? "bg-emerald-500" : "bg-rose-500" }].map((p) => (
           <div key={p.k} className="flex items-start gap-1.5">
             <span className={`mt-1 size-2.5 shrink-0 rounded-sm ${p.c}`} />
-            <span><span className="block text-slate-400">{p.k}</span><span className="font-mono tabular-nums text-slate-100">{usd(p.v)}</span></span>
+            <span><span className="block text-stone-500">{p.k}</span><span className="font-mono tabular-nums text-stone-900">{usd(p.v)}</span></span>
           </div>
         ))}
       </div>
-      <p className="mt-3 text-xs text-slate-500">
+      <p className="mt-3 text-xs text-stone-500">
         Sell {usd(sell)}. Expected detention {usd(brief.risk.expectedDetention$)} ({brief.risk.expectedDwellH.toFixed(1)} h dwell) is a risk on top, not priced into the sell.{brief.risk?.chargebackPct != null && ` OTIF chargeback: ${brief.risk.chargebackPct}% of ${brief.risk.poValueAssumed ? "assumed " : ""}PO value ${usd(brief.risk.poValue$)} if the carrier misses the window.`}
       </p>
     </div>
@@ -80,8 +80,8 @@ export default function Economics({ brief, offer, events, preview }: { brief: Lo
     return (
       <section data-lenis-prevent className="min-h-0 overflow-y-auto px-8 py-6">
         <h2 className="text-2xl font-semibold tracking-tight">{p.lane.origin} to {p.lane.destination}</h2>
-        <p className="mt-1 text-sm text-slate-400">Load {p.shipmentId} for {p.customerId}, {p.lane.miles} miles, delivering to {p.facility.id}</p>
-        <p className="mt-3 text-sm text-slate-500">Straight from the TMS. Run the agent to see this load’s economics.</p>
+        <p className="mt-1 text-sm text-stone-500">Load {p.shipmentId} for {p.customerId}, {p.lane.miles} miles, delivering to {p.facility.id}</p>
+        <p className="mt-3 text-sm text-stone-500">Straight from the TMS. Run the agent to see this load’s economics.</p>
         <div className="mt-8"><Carriers brief={p} events={[]} detailed /></div>
       </section>
     );
@@ -90,8 +90,8 @@ export default function Economics({ brief, offer, events, preview }: { brief: Lo
     return (
       <section className="grid min-h-0 place-items-center px-8 text-center">
         <div>
-          <p className="text-lg text-slate-300">Pick a load and run the agent.</p>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="text-lg text-stone-700">Pick a load and run the agent.</p>
+          <p className="mt-1 text-sm text-stone-500">
             {preview?.loading ? "Loading this load’s carriers from the TMS…" : preview?.error ? `Carrier preview unavailable (${preview.error}). The agent can still run.` : "Its economics appear here the moment the agent reads the load brief."}
           </p>
         </div>
@@ -104,25 +104,25 @@ export default function Economics({ brief, offer, events, preview }: { brief: Lo
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">{brief.lane.origin} to {brief.lane.destination}</h2>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-stone-500">
             Load {brief.shipmentId} for {brief.customerId}, {brief.lane.miles} miles, delivering to {brief.facility.id}
           </p>
         </div>
         {TMS_UI && (
           <a href={`${TMS_UI}/shipments/${encodeURIComponent(brief.shipmentId)}`} target="_blank" rel="noreferrer"
-            className="rounded-lg border border-sky-400/40 px-3 py-2 text-sm font-medium text-sky-200 transition hover:bg-sky-400/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-300">
+            className="rounded-lg border border-indigo-300 px-3 py-2 text-sm font-medium text-indigo-800 transition hover:bg-indigo-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600">
             Open load {brief.shipmentId} in the TMS ↗
           </a>
         )}
       </header>
 
-      <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.03] p-6">
+      <div className="mt-8 rounded-2xl border border-stone-200 bg-white p-6">
         <DollarBar brief={brief} offer={offer} />
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
         <div>
-          <div className="divide-y divide-white/5 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-2">
+          <div className="divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white px-4 py-2">
             <Row k="Max linehaul we can pay" v={usd(brief.margin.maxLinehaul, 2)} strong />
             <Row k="Current offer" v={offer == null ? "none yet" : usd(offer, 2)} strong tone={offer == null ? undefined : over > 0 ? "bad" : "ok"} />
             {over > 0 && <Row k="Over the ceiling by" v={usd(over, 2)} tone="bad" />}
@@ -133,7 +133,7 @@ export default function Economics({ brief, offer, events, preview }: { brief: Lo
           </div>
           <div className="mt-4 flex flex-wrap gap-1.5">
             {brief.flags.map((f) => (
-              <span key={f} className={`rounded-full px-2.5 py-1 text-xs ${f.toLowerCase().includes("unreachable") ? "bg-rose-500/15 text-rose-200" : "bg-white/5 text-slate-300"}`}>{f}</span>
+              <span key={f} className={`rounded-full px-2.5 py-1 text-xs ${f.toLowerCase().includes("unreachable") ? "bg-rose-100 text-rose-800" : "bg-stone-100 text-stone-700"}`}>{f}</span>
             ))}
           </div>
         </div>

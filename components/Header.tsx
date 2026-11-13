@@ -4,11 +4,11 @@ import CountUp from "./CountUp";
 import type { RunStatus } from "./useReplay";
 
 const label: Record<RunStatus, { text: string; cls: string }> = {
-  idle: { text: "Idle", cls: "bg-white/5 text-slate-400" },
-  running: { text: "Agent working", cls: "bg-sky-400/15 text-sky-300" },
-  awaiting: { text: "Needs approval", cls: "bg-amber-400/15 text-amber-300" },
-  done: { text: "Complete", cls: "bg-emerald-400/15 text-emerald-300" },
-  error: { text: "Backend error", cls: "bg-rose-500/15 text-rose-300" },
+  idle: { text: "Idle", cls: "bg-stone-100 text-stone-500" },
+  running: { text: "Agent working", cls: "bg-indigo-100 text-indigo-700" },
+  awaiting: { text: "Needs approval", cls: "bg-amber-100 text-amber-700" },
+  done: { text: "Complete", cls: "bg-emerald-100 text-emerald-700" },
+  error: { text: "Backend error", cls: "bg-rose-100 text-rose-700" },
 };
 
 const DIAL = [
@@ -24,40 +24,40 @@ export default function Header({ status, protectedUsd, mode, onMode, onStart, on
 }) {
   const s = label[status];
   return (
-    <header className="flex items-center justify-between gap-6 border-b border-white/10 px-6 py-3">
+    <header className="flex items-center justify-between gap-6 border-b border-stone-200 px-6 py-3">
       <div className="flex items-center gap-4">
-        <div className="grid size-9 place-items-center rounded-lg bg-emerald-400/15 font-mono text-sm font-bold text-emerald-300">CA</div>
+        <div className="grid size-9 place-items-center rounded-lg bg-emerald-100 font-mono text-sm font-bold text-emerald-700">CA</div>
         <div>
           <h1 className="text-[15px] font-semibold leading-tight tracking-tight">Facility-Aware Coverage Agent</h1>
-          <p className="text-xs text-slate-400">Code enforces the limits · AI makes the calls · Humans approve the exceptions</p>
+          <p className="text-xs text-stone-500">Code enforces the limits · AI makes the calls · Humans approve the exceptions</p>
         </div>
       </div>
       <div className="flex items-center gap-6">
         <div className="text-right">
-          <div className="text-[10px] uppercase tracking-widest text-slate-500" title="Expected detention + expected OTIF chargeback: dock costs nobody bills for, priced before booking">Dock risk priced before booking</div>
-          <div className="font-mono text-2xl font-semibold text-emerald-300"><CountUp value={protectedUsd} digits={0} /></div>
+          <div className="text-[10px] uppercase tracking-widest text-stone-500" title="Expected detention + expected OTIF chargeback: dock costs nobody bills for, priced before booking">Dock risk priced before booking</div>
+          <div className="font-mono text-2xl font-semibold text-emerald-700"><CountUp value={protectedUsd} digits={0} /></div>
         </div>
-        <div className="flex rounded-lg border border-white/10 p-0.5 text-xs">
+        <div className="flex rounded-lg border border-stone-200 p-0.5 text-xs">
           {(["live", "demo"] as const).map((m) => (
-            <button key={m} onClick={() => mode !== m && onMode(m)} className={`rounded-md px-3 py-1.5 font-medium capitalize transition ${mode === m ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"}`}>{m}</button>
+            <button key={m} onClick={() => mode !== m && onMode(m)} className={`rounded-md px-3 py-1.5 font-medium capitalize transition ${mode === m ? "bg-stone-100 text-stone-900" : "text-stone-500 hover:text-stone-700"}`}>{m}</button>
           ))}
         </div>
         {autonomy && (
           <div role="radiogroup" aria-label="Autonomy" className="flex items-center gap-2">
-            <span className="text-[10px] uppercase tracking-widest text-slate-500">Autonomy</span>
-            <div className="flex rounded-lg border border-white/10 p-0.5 text-xs">
+            <span className="text-[10px] uppercase tracking-widest text-stone-500">Autonomy</span>
+            <div className="flex rounded-lg border border-stone-200 p-0.5 text-xs">
               {DIAL.map((d) => (
                 <button key={d.k} role="radio" aria-checked={autonomy === d.k} title={d.tip} disabled={!onAutonomy} onClick={() => onAutonomy?.(d.k)}
-                  className={`rounded-md px-2.5 py-1.5 font-medium transition disabled:cursor-not-allowed ${autonomy === d.k ? "bg-amber-400/20 text-amber-200" : "text-slate-500 enabled:hover:text-slate-300"}`}>{d.t}</button>
+                  className={`rounded-md px-2.5 py-1.5 font-medium transition disabled:cursor-not-allowed ${autonomy === d.k ? "bg-amber-100 text-amber-800" : "text-stone-500 enabled:hover:text-stone-700"}`}>{d.t}</button>
               ))}
             </div>
           </div>
         )}
         <span className={`rounded-full px-3 py-1 text-xs font-medium ${s.cls}`}>{s.text}</span>
         {status === "idle" ? (
-          <button onClick={onStart} className="rounded-lg bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-950 transition active:scale-[0.97] motion-reduce:active:scale-100 hover:bg-emerald-300">Run coverage agent</button>
+          <button onClick={onStart} className="rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-700 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-900/20 transition active:scale-[0.97] motion-reduce:active:scale-100 hover:from-indigo-600 hover:to-indigo-800">Run coverage agent</button>
         ) : (
-          <button onClick={onReset} className="rounded-lg border border-white/15 px-4 py-2 text-sm text-slate-300 transition hover:bg-white/5">Reset demo</button>
+          <button onClick={onReset} className="rounded-lg border border-stone-200 px-4 py-2 text-sm text-stone-700 transition hover:bg-stone-100">Reset demo</button>
         )}
       </div>
     </header>

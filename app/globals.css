@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f3ec;
+  --foreground: #1c1917;
 }
 
 @theme inline {
@@ -12,15 +12,17 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* Light theme surface: warm paper with a faint indigo wash top-left and an amber wash bottom-right. */
+.app-bg {
+  background:
+    radial-gradient(1100px 520px at 0% 0%, rgba(99, 102, 241, 0.10), transparent 60%),
+    radial-gradient(900px 480px at 100% 100%, rgba(245, 158, 11, 0.10), transparent 60%),
+    linear-gradient(180deg, #faf8f3 0%, #f3efe6 100%);
 }

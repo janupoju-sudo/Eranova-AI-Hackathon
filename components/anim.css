@@ -5,14 +5,14 @@
 /* "Negotiating with…" status line: a soft highlight sweeping across the text while the agent works. */
 @keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 .shimmer-text {
-  background: linear-gradient(90deg, #64748b 0%, #64748b 35%, #f1f5f9 50%, #64748b 65%, #64748b 100%);
+  background: linear-gradient(90deg, #a8a29e 0%, #a8a29e 35%, #1c1917 50%, #a8a29e 65%, #a8a29e 100%);
   background-size: 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   animation: shimmer 2.2s linear infinite;
 }
-@media (prefers-reduced-motion: reduce) { .shimmer-text { animation: none; color: #cbd5e1; background: none; } }
+@media (prefers-reduced-motion: reduce) { .shimmer-text { animation: none; color: #57534e; background: none; } }
 
 @media (prefers-reduced-motion: reduce) {
   [class*="animate-[fadein"], [class*="animate-[rise"], [class*="animate-[shake"] { animation: none !important; }
