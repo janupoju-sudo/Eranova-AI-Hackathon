@@ -68,25 +68,50 @@ function Working({ text }: { text: string }) {
   );
 }
 
+/** Plain-language headline for a step the guardrails (or the TMS) refused. */
+function refusalHeadline(error: string, detail: string): string {
+  if (error === "not_best_risk_adjusted") {
+    const m = detail.match(/costs \$([\d.]+) risk-adjusted.*?; (\w+) costs \$([\d.]+)/);
+    if (m) return `The code overruled the AI: ${m[2]} is ${usd(Number(m[1]) - Number(m[3]))} cheaper after late-fine risk`;
+    return "The code overruled the AI: another carrier is cheaper after late-fine risk";
+  }
+  const map: Record<string, string> = {
+    over_ceiling: "The code blocked an offer above the margin limit",
+    not_their_price: "The code blocked a price the carrier never quoted",
+    no_quote: "The code blocked an approval for a carrier that has not quoted",
+    carrier_blocked: "The code blocked a carrier the TMS already rejected",
+    ineligible_carrier: "The code blocked an ineligible carrier",
+    approval_required: "The code requires your approval for this carrier",
+    amount_mismatch: "The code blocked a booking at a price the carrier did not agree to",
+    no_deal: "The code blocked a booking with no agreed price",
+    max_rounds: "The code stopped the haggling after three rounds",
+    too_early: "The code blocked an appointment before the delivery window",
+    too_late: "The code blocked an appointment after the delivery window",
+    after_mabd: "The code blocked an appointment after the must-arrive-by date",
+  };
+  return map[error] ?? (/^\d/.test(error) ? "The TMS refused this step" : "The code refused this step");
+}
+
 function ToolResult({ e, recovered }: { e: Extract<AgentEvent, { type: "tool_result" }>; recovered: boolean }) {
   const [open, setOpen] = useState(false);
-  const detail = !e.ok && typeof e.result === "object" && e.result ? (e.result as { status?: number; error?: string; detail?: string }) : null;
-  if (!e.ok) {
-    return (
-      <div className="rounded-xl border border-rose-500/50 bg-rose-500/10 p-4">
-        <div className="flex items-center gap-2">
-          <span className="rounded bg-rose-500 px-2 py-0.5 font-mono text-xs font-bold text-white">{detail?.status ?? detail?.error ?? "ERR"}</span>
-          <span className="text-sm font-semibold text-rose-200">The system refused this step ({e.name})</span>
-          {recovered && <span className="ml-auto rounded bg-emerald-400/15 px-2 py-0.5 text-xs font-semibold text-emerald-300">agent recovered →</span>}
-        </div>
-        {detail?.detail && <p className="mt-2 text-sm text-rose-100">{detail.detail}</p>}
-        <p className="mt-2 text-xs text-rose-300/80">The agent reads this, explains it, and adapts.</p>
-        <button onClick={() => setOpen(!open)} className="mt-2 text-xs text-rose-300 underline-offset-2 hover:underline">{open ? "hide raw" : "raw response"}</button>
-        {open && <div className="mt-2"><Json value={e.result} /></div>}
+  if (e.ok) return null; // successful steps are shown by <Step>
+  const r = (typeof e.result === "object" && e.result ? e.result : {}) as { error?: string; detail?: string };
+  const error = r.error ?? "error";
+  const fromTms = /^\d/.test(error);
+  const tone = fromTms ? { box: "border-rose-500/50 bg-rose-500/10", head: "text-rose-100", body: "text-rose-100/90", meta: "text-rose-300/80" }
+    : { box: "border-amber-400/40 bg-amber-400/[0.07]", head: "text-amber-100", body: "text-amber-50/90", meta: "text-amber-200/70" };
+  return (
+    <div className={`rounded-xl border p-4 ${tone.box}`}>
+      <p className={`text-[15px] font-semibold leading-snug ${tone.head}`}>{refusalHeadline(error, r.detail ?? "")}</p>
+      {r.detail && <p className={`mt-2 text-sm leading-relaxed ${tone.body}`}>{r.detail}</p>}
+      <div className={`mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs ${tone.meta}`}>
+        {recovered && <span className="rounded-full bg-emerald-400/15 px-2 py-0.5 font-medium text-emerald-300">✓ The AI corrected itself</span>}
+        <span className="font-mono">rule: {error}</span>
+        <button onClick={() => setOpen(!open)} aria-expanded={open} className="ml-auto underline-offset-2 hover:underline">{open ? "hide details" : "details"}</button>
       </div>
-    );
-  }
-  return null; // successful steps are shown by <Step>
+      {open && <div className="mt-2"><Json value={e.result} /></div>}
+    </div>
+  );
 }
 
 function Bubble({ e, name }: { e: Extract<AgentEvent, { type: "negotiation" }>; name?: string }) {
