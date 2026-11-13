@@ -1,0 +1,166 @@
+{
+  "shipmentId": "7300176",
+  "customerId": "NORTHSTAR",
+  "lane": {
+    "origin": "Chicago, IL",
+    "destination": "Dallas, TX",
+    "miles": 925
+  },
+  "equipment": "V",
+  "weightLb": 36938,
+  "pickupWindow": {
+    "start": "2026-11-17T08:00:00",
+    "end": "2026-11-17T14:00:00",
+    "tz": "America/Chicago"
+  },
+  "deliveryWindow": {
+    "start": "2026-11-19T06:00:00",
+    "end": "2026-11-19T14:00:00",
+    "tz": "America/Chicago"
+  },
+  "mabdDate": "2026-11-19",
+  "sell": {
+    "total": 3479,
+    "lines": [
+      {
+        "code": "FRT",
+        "amount": 2691.75
+      },
+      {
+        "code": "FSC",
+        "amount": 527.25
+      },
+      {
+        "code": "LUM",
+        "amount": 260
+      }
+    ]
+  },
+  "facility": {
+    "id": "BBR-DC135",
+    "avgUnloadMin": 150,
+    "graceMin": 30,
+    "lumperPolicy": "REQUIRED",
+    "lumperFeeRange": [
+      150,
+      300
+    ],
+    "leadTimeHours": 48,
+    "mabdProgramNote": "OTIF chargeback: 3% of PO value for late arrival; early delivery also non-compliant",
+    "receivingHours": "Mon?Fri 06:00?14:00 America/Chicago",
+    "complianceFlags": [
+      "seal required",
+      "photo ID required",
+      "CHEP pallets"
+    ],
+    "notes": [
+      "2026-11-04: Door 17-22 under repair; expect 30-45 min extra dwell",
+      "Appointments via portal only; reschedule under 24 hours forfeits slot; 06:00?08:00 slots go 3+ days out"
+    ]
+  },
+  "risk": {
+    "expectedDwellH": 3.1,
+    "expectedDetentionH": 1.1,
+    "expectedDetention$": 82.5,
+    "expectedLumper$": 262.5
+  },
+  "laneHistory": {
+    "loads": 2,
+    "avgLinehaulPerMile": 2.47,
+    "avgLumper$": 262.5,
+    "avgGpPct": 12.7
+  },
+  "market": null,
+  "margin": {
+    "floorPct": 18,
+    "maxBuyTotal": 2852.78,
+    "carrierFuel$": 527.25,
+    "maxLinehaul": 2063.03,
+    "floorReachableAtHistory": false
+  },
+  "carriers": [
+    {
+      "vendorId": "LAKESHORE",
+      "name": "LAKESHORE",
+      "equipment": [
+        "V"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2027-09-30",
+      "complianceLight": "GREEN",
+      "onTimePickupPct": 98,
+      "onTimeDeliveryPct": 99,
+      "claims": 0,
+      "loads": 250,
+      "score": 74.0,
+      "warnings": [],
+      "eligible": true
+    },
+    {
+      "vendorId": "RUSTYRIG",
+      "name": "RUSTYRIG",
+      "equipment": [
+        "V"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2026-09-29",
+      "complianceLight": "YELLOW",
+      "onTimePickupPct": 98,
+      "onTimeDeliveryPct": 98,
+      "claims": 0,
+      "loads": 200,
+      "score": 72.6,
+      "warnings": [
+        "cargo insurance expired 2026-09-29"
+      ],
+      "eligible": true
+    },
+    {
+      "vendorId": "CANYONFRT",
+      "name": "CANYONFRT",
+      "equipment": [
+        "V"
+      ],
+      "status": "ACTIVE",
+      "cargoExpires": "2027-08-31",
+      "complianceLight": "GREEN",
+      "onTimePickupPct": 97,
+      "onTimeDeliveryPct": 98,
+      "claims": 0,
+      "loads": 150,
+      "score": 71.3,
+      "warnings": [],
+      "eligible": true
+    },
+    {
+      "vendorId": "BADWOLF",
+      "name": "BADWOLF",
+      "equipment": [
+        "V"
+      ],
+      "status": "DO_NOT_USE",
+      "cargoExpires": "2027-01-01",
+      "complianceLight": "RED",
+      "onTimePickupPct": 95,
+      "onTimeDeliveryPct": 95,
+      "claims": 2,
+      "loads": 100,
+      "score": 58.5,
+      "warnings": [
+        "carrier status: DO_NOT_USE",
+        "DO NOT USE or incompatible equipment"
+      ],
+      "eligible": false
+    }
+  ],
+  "flags": [
+    "margin floor unreachable at historical rates",
+    "lumper policy: REQUIRED",
+    "appointment lead time: 48 hours",
+    "OTIF chargeback: 3% of PO value for late arrival; early delivery also non-compliant",
+    "seal required",
+    "photo ID required",
+    "CHEP pallets",
+    "portal credentials: never store"
+  ]
+}
