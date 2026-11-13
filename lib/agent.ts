@@ -4,7 +4,7 @@
 // how to explain itself). lib/tools.ts enforces every money and compliance limit in code.
 // A run pauses when the model calls request_approval; /api/approve resumes it.
 
-import { generateText, hasToolCall, isStepCount, type ModelMessage } from "ai";
+import { hasToolCall, isStepCount, streamText, type ModelMessage } from "ai";
 import { openai } from "@ai-sdk/openai";
 import type { AgentEvent, Money } from "./types";
 import { createTools, newRunState, type RunState, type ToolDeps } from "./tools";
@@ -94,9 +94,21 @@ export async function resumeRun(
 
 async function loop(run: StoredRun, opts: RunOptions) {
   const { state } = run;
-  const tools = createTools({ deps: opts.deps, state, emit: opts.emit, writesEnabled: opts.writesEnabled });
+  // Stream the model's reasoning so it reaches the feed BEFORE the tool call it explains.
+  let pending = "";
+  const flush = () => {
+    const text = pending.trim();
+    pending = "";
+    if (text) opts.emit({ type: "thought", text });
+  };
+  const emit = (e: AgentEvent) => {
+    if (e.type === "tool_call") flush();
+    opts.emit(e);
+  };
+  const tools = createTools({ deps: opts.deps, state, emit, writesEnabled: opts.writesEnabled });
+  let streamError: unknown = null;
   try {
-    const result = await generateText({
+    const result = streamText({
       model: model(),
       system: SYSTEM_PROMPT,
       messages: run.messages,
@@ -105,19 +117,26 @@ async function loop(run: StoredRun, opts: RunOptions) {
       // One call per step so the model sees a cover 409 before firing cost lines / rate con.
       providerOptions: { openai: { parallelToolCalls: false } },
       stopWhen: [isStepCount(MAX_STEPS), hasToolCall("request_approval")],
-      onStepEnd: (step) => {
-        const text = step.text?.trim();
-        if (text) opts.emit({ type: "thought", text });
+      onChunk: ({ chunk }) => {
+        if (chunk.type === "text-delta") pending += chunk.text;
+      },
+      // The final step (no tool calls) becomes the done summary; don't also emit it as a thought.
+      onStepEnd: (step) => (step.toolCalls.length ? flush() : void (pending = "")),
+      onError: ({ error }) => {
+        streamError = error;
       },
     });
-    run.messages.push(...result.responseMessages);
+    await result.consumeStream();
+    if (streamError) throw streamError;
+    run.messages.push(...(await result.responseMessages));
+    const finalText = (await result.text)?.trim();
 
     if (state.approvalPending) {
       run.status = "awaiting_approval";
       return; // approval_needed already emitted by the tool
     }
     run.status = "done";
-    opts.emit({ type: "done", summary: result.text?.trim() || summarize(state), protected$: protectedDollars(state) });
+    opts.emit({ type: "done", summary: finalText || summarize(state), protected$: protectedDollars(state) });
   } catch (err) {
     run.status = "error";
     const msg = err instanceof Error ? err.message : String(err);

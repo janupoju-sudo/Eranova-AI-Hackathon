@@ -375,6 +375,7 @@ export function createTools(ctx: ToolContext) {
         const numbers: Record<string, Money | number> = {
           offer,
           maxLinehaul: brief.margin.maxLinehaul,
+          overCeiling: round2(offer - brief.margin.maxLinehaul), // read by components/ApprovalPanel.tsx
           sell: brief.sell.total,
           buyTotal: p.totalBuy,
           resultingGpPct: p.gpPct,

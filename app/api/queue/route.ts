@@ -12,7 +12,8 @@ export interface QueueItem {
 }
 
 export async function GET() {
-  const r = await tms.listShipments<Record<string, unknown>>({ status: "BOOKED", limit: 50 });
+  // TL only: LTL needs a PRO number and freight-line rating the agent does not handle.
+  const r = await tms.listShipments<Record<string, unknown>>({ status: "BOOKED", mode: "TL", limit: 50 });
   if (!r.ok) return Response.json(r, { status: r.status || 502 });
   const items = r.result.slice(0, 50).map(
     (s): QueueItem => ({
