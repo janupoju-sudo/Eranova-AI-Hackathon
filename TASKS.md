@@ -1,9 +1,28 @@
 # TASKS — Facility-Aware Coverage Agent
 
-Snapshot: **Fri Nov 13, 12:06 PM** from `main`, `jay/agent`, `advika/ui`, `codex/assigned-work`.
-Checkpoints: **1:00** read-only end-to-end · **1:20** writes allowed · **2:30** hero load live end-to-end · **3:15 code freeze** · **4:00** done.
+Snapshot: **Fri Nov 13, 1:07 PM** — from `main`, `jay/queue-click`, and the hero load's activity log in the TMS.
+Checkpoints: ~~1:00 read-only end-to-end~~ ✅ · ~~2:30 hero load live end-to-end~~ ✅ (done at 12:39) · **3:15 code freeze** · **4:00 done**.
 
 Legend: `[x]` done · `[ ]` to do · ⚠️ needs attention
+
+---
+
+## Verified status (1:07 PM)
+
+- `npm run typecheck`, `npm run lint`, `npm run build`: **pass**
+- `fixtures/backend.test.ts`: **10/10 pass**
+- **Live run succeeded on 7300176 at 12:39:** covered with LAKESHORE at $2,327 after human approval → FSC $527.25 + LUM $241.25 cost lines → rate con RC-7300176-1 → appointment REQUESTED 11/19 06:00–14:00 → agent note + sales escalation, all attributed to `API`
+- **Reset worked at 12:47:** uncovered, agent FSC/LUM lines cancelled
+- **Reject path worked at 12:59:** load left open, note + sales escalation written
+- Hero load is **BOOKED** again
+
+### Numbers the system actually computes (use these in the pitch, not the PRD estimates)
+| | PRD estimate | Live system |
+|---|---|---|
+| Max linehaul at 18% floor | ≈ $2,063 | **$2,084.28** |
+| Expected lumper | ≈ $262 | **$241.25** |
+| Lane history margin | 12–13% | **14.76%** avg |
+| Winning carrier (12:39 run) | — | LAKESHORE **$2,327** → GP ≈ **11.0%** |
 
 ---
 
@@ -11,86 +30,82 @@ Legend: `[x]` done · `[ ]` to do · ⚠️ needs attention
 
 | Branch | State |
 |---|---|
-| `main` | Docs + scaffold + Akshaya's backend (PR #5) + Jay's first agent pass (PR #4) |
-| `jay/agent` | **3 commits not on `main`** (wire to tms/intel, negotiation tuning, live API mapping) — no open PR |
-| `advika/ui` | **1 commit not on `main`** (console UI, carrier sim) — no open PR; branched before #4/#5 merged |
-| `codex/assigned-work` | Merged (PR #5) |
+| `main` | Everything through PR #11 (queue click) |
+| `jay/queue-click` | ⚠️ **1 commit not on `main`:** `12132ea` carriers panel — no PR open |
 
 ---
 
 ## Jay — agent, tools, API routes
 
 ### Done
-- [x] PRD.md, AGENTS.md, CLAUDE.md (PR #1, #2)
-- [x] Next.js scaffold, `lib/types.ts` (PRD §8), deps, `npm run reset` / `typecheck` (PR #3)
-- [x] `lib/agent.ts`: Coverage Agent loop (AI SDK v7), system prompt, step cap, pauses on `request_approval`, resume on approve/reject, in-memory run store
-- [x] `lib/tools.ts`: 9 tools — `get_load_brief`, `negotiate`, `cover`, `add_cost`, `generate_rate_con`, `request_appointment`, `add_note`, `request_approval`, `escalate_to_sales`
-  - [x] Ceiling enforced in code; cover only at an amount a carrier actually accepted
-  - [x] FSC/LUM amounts come from the brief, tagged `[coverage-agent]` (reset depends on this)
-  - [x] Write gate: TMS writes only when `TMS_WRITES=1`, dry-run otherwise
-- [x] API routes: `POST /api/run` (NDJSON stream), `POST /api/approve` (`{ runId, decision: "approved" | "rejected", note? }`), `GET /api/queue` (PR #4)
-- [x] Hero load found by details (NORTHSTAR, Chicago → Dallas, BOOKED), fallback 7300176
-- [x] Temporary carrier sim `app/api/_lib/devDeps.ts`
-- [x] On `jay/agent` (unmerged): agent wired to `lib/tms.ts` + `lib/intel.ts`; one tool call per step; counter at ceiling, try top 3 carriers; live API mapping in intel; 18% company floor
-- [x] `/api/reset` route added, then cut (reset stays a script)
+- [x] PRD.md, AGENTS.md, CLAUDE.md, TASKS.md (PR #1, #2, #6)
+- [x] Next.js scaffold, `lib/types.ts`, deps, scripts (PR #3)
+- [x] Agent loop (AI SDK v7), system prompt, step cap, pause on `request_approval`, resume on approve/reject
+- [x] 9 tools with code-enforced ceiling; cover only at an accepted amount; FSC/LUM amounts from the brief, tagged `[coverage-agent]`
+- [x] `/api/run` (NDJSON), `/api/approve`, `/api/queue`; hero found by details
+- [x] Wired to `lib/tms.ts` + `lib/intel.ts`; live API mapping; 18% company floor (PR #7)
+- [x] Swapped in Advika's `lib/carrierSim.ts` (PR #7)
+- [x] Fixed `scripts/reset.ts` for the live cost format (PR #7)
+- [x] Feed ordering (thought before tool call), no duplicate summary (PR #8)
+- [x] Removed the 1:20 write clock — team went live early (PR #10)
+- [x] Queue cards selectable; Run covers the selected load (PR #11)
+- [x] Carriers panel with live status + warnings (`12132ea`, not merged)
+- [x] **Live end-to-end run with writes on the hero load** (12:39)
 
 ### To do
-- [ ] ⚠️ Open a PR for `jay/agent` → `main`. It changes `lib/intel.ts` and `lib/tms.ts` (Akshaya's files) — **get Akshaya's review before merging**
-- [ ] **By 1:00:** live read-only run on the hero load (`TMS_WRITES` unset): brief → negotiation → approval → dry-run writes; share the event log with Advika
-- [ ] Swap `devRespond` for `lib/carrierSim.ts` once `advika/ui` is on `main` (small adapter: `SimReply` → `CarrierReply`, keep the driver name/phone)
-- [ ] **After 1:20:** `TMS_WRITES=1` end-to-end on the hero load, including the real RUSTYRIG 409 from `/cover` (target **2:30**)
-- [ ] Check `request_appointment` output: facility-local window on **11/19**, inside **06:00–14:00 CT**, status `REQUESTED`, no `acknowledge_mabd`
-- [ ] Verify in the TMS web app after a live run: FRT + FSC + LUM costs, rate con generated, appointment requested, agent note — all by `API`
-- [ ] 2:30–3:15: run the rest of the BOOKED queue (cut line: hero only)
+- [ ] ⚠️ **Open a PR for `12132ea` (carriers panel) and merge.** It touches `components/*` (Advika's files) — give her a heads-up
+- [ ] ⚠️ **Make the RUSTYRIG 409 happen every run.** The prompt only tries a YELLOW "budget" carrier; RUSTYRIG is RED, so the 409 isn't guaranteed. Fix in `lib/carrierSim.ts` (Advika's file — ask her or agree first): RUSTYRIG accepts at/below the ceiling → agent covers → TMS 409 → recovery. Confirm it in one live run
+- [ ] **Tighten agent notes** (`lib/agent.ts` prompt): notes state only facts from tool results; name every 409 and its `detail`; sales escalation quotes `recommendedSell`, `resultingGpPct`, `gpWithDetentionPct` from the approval numbers (the 12:40 note said "escalated due to insurance issues with other carriers" — inaccurate)
+- [ ] **Autonomy dial** (matches the hallway pitch): `APPROVAL_MODE=all|exceptions` (env or UI toggle) checked in `cover` — `all` requests approval before every cover. ~20 min; only if time allows
+- [ ] Add `TMS_WRITES` and `NEXT_PUBLIC_TMS_UI_URL` to `.env.example`
+- [ ] Optional: run a second BOOKED load in the demo to show it isn't hero-only
 
 ---
 
 ## Akshaya — backend data & rules
 
 ### Done
-- [x] `lib/tms.ts`: throttled client (~150 ms), non-throwing `{ ok, result }` / `{ ok:false, status, error, detail }`, pagination, all PRD helpers, **writes blocked before 1:20 PM** (PR #5)
-- [x] `lib/intel.ts`: `computeBrief`, `loadBriefResult`, `loadBrief`, `scoreCarrier`, `priceImpact` (approval-panel numbers, GP incl. detention, suggested sell)
-- [x] `scripts/reset.ts`: preview by default, `--execute` to uncover + cancel only `[coverage-agent]` FSC/LUM costs; BOOKED/COVERED only; verifies after
-- [x] Fixtures: `loadBrief.hero.json`, `events.sample.json`, `backend.test.ts`, handoff `README.md`
+- [x] `lib/tms.ts`: throttled client, non-throwing results, pagination, all helpers (PR #5)
+- [x] `lib/intel.ts`: `computeBrief`, `loadBriefResult`, `loadBrief`, `scoreCarrier`, `priceImpact` (PR #5)
+- [x] `scripts/reset.ts`: preview by default, `--execute`, tagged FSC/LUM only (PR #5; live-format fix in PR #7)
+- [x] Fixtures + `backend.test.ts` (10/10 passing) + handoff README (PR #5)
+- [x] Live brief verified in practice: ceiling $2,084.28, lumper $241.25, lane history 14.76%
 
 ### To do
-- [ ] ⚠️ Review Jay's edits to `lib/intel.ts` / `lib/tms.ts` on `jay/agent` (live API mapping, company floor) and approve/merge
-- [ ] ⚠️ **Check `scripts/reset.ts` against the live API.** It reads the raw `getShipment` response but expects `costs[].id`; the live API returns `vendor_costs[].cost_id` (the mapping now lives in intel on `jay/agent`). Likely returns `INVALID_SHIPMENT` until it reuses that mapping. Run the preview now: `npm run reset -- 7300176`
-- [ ] **By 1:00:** verify live `loadBrief` for the hero load matches PRD §5 — max linehaul ≈ **$2,063**, lane history ≈ **$2.45–2.49/mi**, expected dwell ≈ **3 h**, flag "margin floor unreachable at historical rates", RUSTYRIG warning (eligible-looking), BADWOLF ineligible
-- [ ] Confirm the rate-engine `market_context` field names live (fixtures README marks them unverified)
-- [ ] Refresh `fixtures/loadBrief.hero.json` with a real live brief (market no longer `null`) so the UI shows real numbers
-- [ ] **After 1:20, before 3:15:** test `npm run reset -- <id> --execute` on the hero load after a live run
+- [ ] Move "margin protected" math from `lib/agent.ts` (`protectedDollars`) into `lib/intel.ts` — PRD rule: all money math in intel (TODO already in the code)
+- [ ] Refresh `fixtures/loadBrief.hero.json` with the live brief (market no longer `null`, live numbers above) so **Demo mode** matches **Live mode**
+- [ ] Re-run `backend.test.ts` after any intel change
+- [ ] Before the final demo: `npm run reset -- <id>` preview → `--execute`, confirm BOOKED with no agent cost lines
 
 ---
 
 ## Advika — UI
 
 ### Done
-- [x] Three-column console on mock data: `Queue`, `Feed`, `Economics`, `ApprovalPanel`, `Header` with count-up "$ protected" (`advika/ui`)
-- [x] Scripted replay (`useReplay`) with approve/reject flow
-- [x] Lenis smooth scroll (`app/providers.tsx`), `data-lenis-prevent` on feed and JSON panels
-- [x] `lib/carrierSim.ts`: seeded, deterministic carrier simulator (no LLM)
+- [x] Three-column console: Queue, Feed, Economics, ApprovalPanel, Header with count-up "margin protected" (PR #9)
+- [x] Lenis smooth scroll + `data-lenis-prevent` on inner panels
+- [x] Seeded `lib/carrierSim.ts` (deterministic rehearsals)
+- [x] Wired to `/api/run` (NDJSON), `/api/approve`, `/api/queue` with **Live / Demo** toggle (PR #9)
+- [x] Approval panel reads `overCeiling`, `resultingGpPct`; margin meter compares at displayed precision (PR #9)
+- [x] Replay timers cleaned up; lint fixed
 
 ### To do
-- [ ] ⚠️ Open a PR `advika/ui` → `main`; rebase on current `main` first (`app/page.tsx` changed on both sides)
-- [ ] Wire `useReplay` to the real backend:
-  - `POST /api/run` `{ shipmentId? }` → **NDJSON** (one `AgentEvent` JSON per line — read with `response.body.getReader()`, not EventSource/SSE)
-  - `POST /api/approve` `{ runId, decision: "approved" | "rejected" }` using `runId` from the `approval_needed` event
-  - Keep the mock replay behind a toggle as the demo fallback
-- [ ] Queue from `GET /api/queue`
-- [ ] Economics card from the `get_load_brief` tool result; approval numbers from the `approval_needed` event (no money math in the UI)
-- [ ] "Open in TMS" link for the proof moment (web app URL is in `.env.local` as `TMS_UI_URL`; pass it through an API route or hardcode the non-secret UI URL)
-- [ ] Make the RUSTYRIG 409 visually obvious in the feed (red error → "recovered")
-- [ ] Optional polish: `npx shadcn@latest init`, then React Bits components (`@react-bits/<Name>-TS-TW`)
-- [ ] Demo script + slides (PRD §13)
+- [ ] ⚠️ **"Open in TMS" link never renders.** `components/Economics.tsx` reads `NEXT_PUBLIC_TMS_UI_URL`, but `.env.local` only has `TMS_UI_URL`. Add `NEXT_PUBLIC_TMS_UI_URL=https://d34un8lk4yzrp0.cloudfront.net` to everyone's `.env.local`, and change the link to `${url}/shipments/${brief.shipmentId}?tab=activity` so it opens the load's activity log (the proof moment)
+- [ ] ⚠️ RUSTYRIG change in `lib/carrierSim.ts` (see Jay's task) — your file, so you or Jay with your OK
+- [ ] Make the 409 → recovered moment visually obvious in the feed (red error card → green "recovered")
+- [ ] Make the economics card the visual centerpiece; shrink the negotiation chat (differentiator = the dock, not the haggling)
+- [ ] Optional polish: shadcn init + one React Bits effect on the title / 409 moment
+- [ ] Slides (PRD §13): problem → live run → TMS proof → escalation → close
 
 ---
 
-## Team
+## Team — demo readiness
 
-- [ ] **1:00 checkpoint** — live read-only run renders in the real UI
-- [ ] Merge `jay/agent` and `advika/ui` into `main` right after 1:00
-- [ ] **2:30 checkpoint** — hero load end-to-end with live writes
+- [ ] ⚠️ **Clean activity log for the demo.** Test runs left notes on 7300176 that reset can't remove (the 12:59 rejected-run notes are visible). Pick one:
+  - ask Yusuf to reset the environment right after the 3:15 freeze (code finds the hero load by details, so new IDs are fine), **or**
+  - run the final demo on a different BOOKED load
+- [ ] Update pitch numbers to the **live system** table above (14.76% lane history, $2,084.28 ceiling)
+- [ ] Pitch wording: "Facility-Aware Coverage Agent" — prices the dock, books routine loads itself, stages exceptions for the broker with the math done, sends sales the repricing case. Don't lead with "negotiation"
 - [ ] **3:15 code freeze**
-- [ ] 3:15–3:45 reset, rehearse twice, **screen-record a backup run**
-- [ ] 3:45–4:00 submit
+- [ ] 3:15–3:45: reset → rehearse twice → **screen-record a full backup run** (Live mode, writes on)
+- [ ] 3:45–4:00: submit
