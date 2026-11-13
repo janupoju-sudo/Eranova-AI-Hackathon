@@ -2,6 +2,7 @@
 // Numbers follow PRD §5. Swap for fixtures/loadBrief.hero.json + fixtures/events.sample.json when committed.
 import { respond, type SimCarrier, type SimTurn } from "@/lib/carrierSim";
 import type { AgentEvent, CarrierCandidate, LoadBrief } from "@/lib/types";
+import type { QueueLoad } from "./useQueue";
 
 const carrier = (
   vendorId: string, name: string, score: number, otd: number, otp: number, claims: number, loads: number,
@@ -42,7 +43,7 @@ export const heroBrief: LoadBrief = {
   },
   risk: { expectedDwellH: 3.1, expectedDetentionH: 1.1, expectedDetention$: 82.5, expectedLumper$: 262 },
   laneHistory: { loads: 2, avgLinehaulPerMile: 2.47, avgLumper$: 262.5, avgGpPct: 12.7 },
-  market: { low: 2010, target: 2200, high: 2420, rateId: "mock-rate" },
+  market: { low: 2210, target: 2435, high: 2660, rateId: "mock-rate" },
   margin: { floorPct: 18, maxBuyTotal: 2852.78, carrierFuel$: 527.25, maxLinehaul: 2063, floorReachableAtHistory: false },
   carriers: [
     carrier("LAKESHORE", "Lakeshore Transport", 62, 96, 93, 0, 41),
@@ -68,19 +69,16 @@ export const heroBrief: LoadBrief = {
   ],
 };
 
-export interface QueueLoad {
-  shipmentId: string; customer: string; lane: string; pickup: string; sell: number; hero?: boolean;
-}
 export const queue: QueueLoad[] = [
-  { shipmentId: "7300176", customer: "NORTHSTAR", lane: "Chicago, IL → Dallas, TX", pickup: "11/17", sell: 3479, hero: true },
-  { shipmentId: "7300181", customer: "HARBORLT", lane: "Atlanta, GA → Charlotte, NC", pickup: "11/16", sell: 1420 },
-  { shipmentId: "7300184", customer: "BRIGHTMILL", lane: "Columbus, OH → Nashville, TN", pickup: "11/16", sell: 1985 },
-  { shipmentId: "7300187", customer: "NORTHSTAR", lane: "Joliet, IL → Memphis, TN", pickup: "11/17", sell: 2310 },
-  { shipmentId: "7300190", customer: "PINECREST", lane: "Dallas, TX → Houston, TX", pickup: "11/17", sell: 1105 },
-  { shipmentId: "7300193", customer: "HARBORLT", lane: "Savannah, GA → Orlando, FL", pickup: "11/18", sell: 1760 },
-  { shipmentId: "7300196", customer: "BRIGHTMILL", lane: "Indianapolis, IN → Detroit, MI", pickup: "11/18", sell: 1340 },
-  { shipmentId: "7300199", customer: "PINECREST", lane: "Phoenix, AZ → Denver, CO", pickup: "11/18", sell: 2890 },
-  { shipmentId: "7300203", customer: "NORTHSTAR", lane: "Kansas City, MO → Omaha, NE", pickup: "11/19", sell: 1215 },
+  { shipmentId: "7300176", customerId: "NORTHSTAR", lane: "Chicago, IL → Dallas, TX", pickupDate: "2026-11-17", sell: 3479 },
+  { shipmentId: "7300181", customerId: "HARBORLT", lane: "Atlanta, GA → Charlotte, NC", pickupDate: "2026-11-16", sell: 1420 },
+  { shipmentId: "7300184", customerId: "BRIGHTMILL", lane: "Columbus, OH → Nashville, TN", pickupDate: "2026-11-16", sell: 1985 },
+  { shipmentId: "7300187", customerId: "NORTHSTAR", lane: "Joliet, IL → Memphis, TN", pickupDate: "2026-11-17", sell: 2310 },
+  { shipmentId: "7300190", customerId: "PINECREST", lane: "Dallas, TX → Houston, TX", pickupDate: "2026-11-17", sell: 1105 },
+  { shipmentId: "7300193", customerId: "HARBORLT", lane: "Savannah, GA → Orlando, FL", pickupDate: "2026-11-18", sell: 1760 },
+  { shipmentId: "7300196", customerId: "BRIGHTMILL", lane: "Indianapolis, IN → Detroit, MI", pickupDate: "2026-11-18", sell: 1340 },
+  { shipmentId: "7300199", customerId: "PINECREST", lane: "Phoenix, AZ → Denver, CO", pickupDate: "2026-11-18", sell: 2890 },
+  { shipmentId: "7300203", customerId: "NORTHSTAR", lane: "Kansas City, MO → Omaha, NE", pickupDate: "2026-11-19", sell: 1215 },
 ];
 
 // ---- scripted run ----
@@ -115,7 +113,7 @@ const gp = (lh: number) => ((3479 - (lh + 527.25 + 262)) / 3479) * 100;
 export const preApproval: AgentEvent[] = [
   { type: "thought", text: "Reading the load brief before touching anything. Every number I use comes from it." },
   { type: "tool_call", name: "get_load_brief", args: { shipment_id: "7300176" } },
-  { type: "tool_result", name: "get_load_brief", ok: true, result: { shipmentId: "7300176", sell: 3479, maxLinehaul: 2063, flags: heroBrief.flags } },
+  { type: "tool_result", name: "get_load_brief", ok: true, result: heroBrief },
   { type: "thought", text: "Max linehaul is $2,063 ($2.23/mi). This lane has historically cleared at $2.45–2.49/mi, so the 18% floor is unreachable at normal rates. I'll negotiate hard, then escalate rather than quietly eat the margin." },
   { type: "thought", text: "RUSTYRIG is ACTIVE and cheap on paper. Trying it first." },
   { type: "tool_call", name: "cover", args: { shipment_id: "7300176", carrier_id: "RUSTYRIG", amount: 2063 } },

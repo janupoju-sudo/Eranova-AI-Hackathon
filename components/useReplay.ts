@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { AgentEvent } from "@/lib/types";
 import { afterReject, eventDelay, postApproval, preApproval } from "./mock";
 
-export type RunStatus = "idle" | "running" | "awaiting" | "done";
+export type RunStatus = "idle" | "running" | "awaiting" | "done" | "error";
 
 // Replays scripted events with timing. Replace the source with the SSE stream from /api/run when it exists;
 // approve/reject then become POST /api/approve.
@@ -43,5 +43,5 @@ export function useReplay() {
     setStatus("idle");
   }, []);
 
-  return { events, status, start, reset, approve: () => decide(true), reject: () => decide(false) };
+  return { events, status, error: null as string | null, start, reset, approve: () => decide(true), reject: () => decide(false) };
 }

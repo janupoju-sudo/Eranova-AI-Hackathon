@@ -16,10 +16,10 @@ export default function ApprovalPanel({ approval, onApprove, onReject }: { appro
             <p className="mt-1 text-sm text-amber-50">{approval.reason}</p>
           </div>
           <div className="flex shrink-0 gap-6 text-right">
-            <Stat k="Offer" v={usd(Number(n.offer))} />
-            <Stat k="Ceiling" v={usd(Number(n.maxLinehaul))} />
-            <Stat k="Over by" v={usd(Number(n.overCeiling))} bad />
-            <Stat k="Resulting GP" v={`${n.resultingGpPct}%`} bad />
+            {n.offer != null && <Stat k="Offer" v={usd(Number(n.offer))} />}
+            {n.maxLinehaul != null && <Stat k="Ceiling" v={usd(Number(n.maxLinehaul))} />}
+            {n.overCeiling != null && <Stat k="Over by" v={usd(Number(n.overCeiling))} bad />}
+            {n.resultingGpPct != null && <Stat k="Resulting GP" v={`${n.resultingGpPct}%`} bad />}
           </div>
         </div>
         <div className="mt-4 flex justify-end gap-3">

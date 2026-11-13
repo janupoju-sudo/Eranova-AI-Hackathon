@@ -8,10 +8,11 @@ const label: Record<RunStatus, { text: string; cls: string }> = {
   running: { text: "Agent working", cls: "bg-sky-400/15 text-sky-300" },
   awaiting: { text: "Needs approval", cls: "bg-amber-400/15 text-amber-300" },
   done: { text: "Complete", cls: "bg-emerald-400/15 text-emerald-300" },
+  error: { text: "Backend error", cls: "bg-rose-500/15 text-rose-300" },
 };
 
-export default function Header({ status, protectedUsd, onStart, onReset }: {
-  status: RunStatus; protectedUsd: number; onStart: () => void; onReset: () => void;
+export default function Header({ status, protectedUsd, mode, onMode, onStart, onReset }: {
+  status: RunStatus; protectedUsd: number; mode: "live" | "demo"; onMode: (m: "live" | "demo") => void; onStart: () => void; onReset: () => void;
 }) {
   const s = label[status];
   return (
@@ -27,6 +28,11 @@ export default function Header({ status, protectedUsd, onStart, onReset }: {
         <div className="text-right">
           <div className="text-[10px] uppercase tracking-widest text-slate-500">Margin protected</div>
           <div className="font-mono text-2xl font-semibold text-emerald-300"><CountUp value={protectedUsd} digits={0} /></div>
+        </div>
+        <div className="flex rounded-lg border border-white/10 p-0.5 text-xs">
+          {(["live", "demo"] as const).map((m) => (
+            <button key={m} onClick={() => mode !== m && onMode(m)} className={`rounded-md px-3 py-1.5 font-medium capitalize transition ${mode === m ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"}`}>{m}</button>
+          ))}
         </div>
         <span className={`rounded-full px-3 py-1 text-xs font-medium ${s.cls}`}>{s.text}</span>
         {status === "idle" ? (

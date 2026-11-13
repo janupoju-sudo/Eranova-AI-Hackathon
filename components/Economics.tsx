@@ -32,12 +32,20 @@ function MarginMeter({ gp, floor }: { gp: number | null; floor: number }) {
   );
 }
 
-export default function Economics({ brief, offer }: { brief: LoadBrief; offer: number | null }) {
+export default function Economics({ brief, offer }: { brief: LoadBrief | null; offer: number | null }) {
+  if (!brief) {
+    return (
+      <aside className="flex min-h-0 flex-col border-l border-white/10">
+        <div className="px-5 py-3"><h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400">Load economics</h2></div>
+        <p className="px-5 text-sm text-slate-500">Appears when the agent reads the load brief.</p>
+      </aside>
+    );
+  }
   const gp = offer == null ? null : gpPctAt(brief, offer);
   const over = offer != null ? offer - brief.margin.maxLinehaul : 0;
   return (
     <aside className="flex min-h-0 flex-col border-l border-white/10">
-      <div className="px-5 py-3"><h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400">Load economics · #{brief.shipmentId}</h2></div>
+      <div className="px-5 py-3"><h2 className="text-xs font-semibold uppercase tracking-widest text-slate-400">Load economics · #{brief.shipmentId}</h2>{process.env.NEXT_PUBLIC_TMS_UI_URL && <a href={process.env.NEXT_PUBLIC_TMS_UI_URL} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs text-sky-300 hover:underline">Open in TMS ↗</a>}</div>
       <div data-lenis-prevent className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 pb-5">
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
           <div className="text-sm font-medium">{brief.lane.origin} → {brief.lane.destination}</div>
