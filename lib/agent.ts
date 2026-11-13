@@ -120,7 +120,8 @@ async function loop(run: StoredRun, opts: RunOptions) {
       onChunk: ({ chunk }) => {
         if (chunk.type === "text-delta") pending += chunk.text;
       },
-      onStepEnd: flush,
+      // The final step (no tool calls) becomes the done summary; don't also emit it as a thought.
+      onStepEnd: (step) => (step.toolCalls.length ? flush() : void (pending = "")),
       onError: ({ error }) => {
         streamError = error;
       },
