@@ -32,9 +32,18 @@ export default function Page() {
     return null;
   }, [events]);
   const offer = useMemo(() => {
+    // Carriers the TMS refused at cover no longer count as an offer.
+    const blocked = new Set<string>();
+    events.forEach((e, i) => {
+      if (e.type !== "tool_result" || e.name !== "cover" || e.ok) return;
+      const call = events.slice(0, i).reverse().find((x) => x.type === "tool_call" && x.name === "cover");
+      const id = call?.type === "tool_call" ? (call.args as { carrier_id?: string }).carrier_id : undefined;
+      if (id) blocked.add(id);
+    });
     for (let i = events.length - 1; i >= 0; i--) {
       const e = events[i];
-      if (e.type === "negotiation" && e.from === "carrier" && e.amount != null) return e.amount;
+      if (e.type === "approval_needed") return Number(e.numbers.offer); // the price the human is being asked about
+      if (e.type === "negotiation" && e.from === "carrier" && e.amount != null && !blocked.has(e.carrierId)) return e.amount;
     }
     return null;
   }, [events]);
@@ -60,10 +69,10 @@ export default function Page() {
     <Providers>
       <div className="grid h-screen grid-rows-[auto_minmax(0,1fr)_auto] bg-[#0b0f14] text-slate-100">
         <Header status={status} protectedUsd={protectedUsd} mode={mode} onMode={onMode} onStart={onStart} autonomy={mode === "live" ? autonomy : undefined} onAutonomy={busy ? undefined : setAutonomy} onReset={onReset} />
-        <div className="grid min-h-0 grid-cols-[300px_minmax(0,1fr)_380px]">
+        <div className="grid min-h-0 grid-cols-[260px_minmax(0,1fr)_440px]">
           <Queue items={queue.items} heroId={heroId} status={status} outcome={outcome} loading={queue.loading} error={queue.error} onSelect={mode === "live" && !busy ? onSelect : undefined} />
-          <Feed events={events} error={error} />
           <Economics brief={brief} offer={offer} events={events} />
+          <Feed events={events} error={error} />
         </div>
         {status === "awaiting" && approval && <ApprovalPanel approval={approval} onApprove={run.approve} onReject={run.reject} />}
       </div>
